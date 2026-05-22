@@ -18,6 +18,14 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 - [**puregram-storage**](./puregram-storage/SKILL.md) — the `KVStorage<V>` / `TtlStorage<V>` contract that session / scenes / media-cacher / rate-limit all share, plus `enhanceStorage` migrations
 - [**puregram-callback-data**](./puregram-callback-data/SKILL.md) — typed `callback_data` payloads via `defineCallbackData`, `.button`, `.filter`, `.with`
 - [**puregram-testing**](./puregram-testing/SKILL.md) — actor-driven in-process test framework, vitest / mocha / node:test agnostic
+- [**puregram-markup**](./puregram-markup/SKILL.md) — tagged-template entity-aware formatter; composes message entities directly, no `parse_mode` header needed
+- [**puregram-media-cacher**](./puregram-media-cacher/SKILL.md) — transparent `file_id` caching plugin; first send uploads, every later send reuses the cached id
+- [**puregram-rate-limit**](./puregram-rate-limit/SKILL.md) — inbound per-user fixed-window rate limiting; filter / middleware / imperative call shapes
+- [**puregram-file-id**](./puregram-file-id/SKILL.md) — TL parser for telegram `file_id` and `file_unique_id` strings; zero puregram deps
+- [**puregram-utils**](./puregram-utils/SKILL.md) — standalone helpers: slot-machine decoder, web app `initData` validation, `parseCommand`, typed `t.me` deep-link builders
+- [**puregram-inline-message-id**](./puregram-inline-message-id/SKILL.md) — TL parser for telegram's `inline_message_id` blob; legacy + modern wire shapes
+- [**puregram-stream**](./puregram-stream/SKILL.md) — stream LLM output to telegram via animated `sendMessageDraft` previews; adapters for openai / anthropic / vercel ai / ollama / langchain
+- [**puregram-throttler**](./puregram-throttler/SKILL.md) — outbound rate-limit middleware; sliding-window buckets keep your bot under telegram's ~30 rps / per-chat / per-group soft limits
 
 ### cookbook
 

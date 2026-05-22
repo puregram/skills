@@ -49,6 +49,14 @@ for deeper topics see the companion sibling skills:
 - `puregram-storage` — `@puregram/storage` (the `KVStorage<V>` / `TtlStorage<V>` contract that session/scenes/media-cacher/rate-limit all build on, plus `enhanceStorage` versioned migrations)
 - `puregram-callback-data` — `@puregram/callback-data` (`defineCallbackData`, typed callback payloads, `.button`, `.filter`, `.with`)
 - `puregram-testing` — `@puregram/test` (actor-driven test framework for puregram bots)
+- `puregram-markup` — `@puregram/markup` (tagged-template entity-aware formatting; composes message entities, no `parse_mode` header needed)
+- `puregram-media-cacher` — `@puregram/media-cacher` (transparent `file_id` caching plugin, drop-in via `onBeforeRequest`)
+- `puregram-rate-limit` — `@puregram/rate-limit` (inbound per-user fixed-window rate limiting; distinct from outbound `@puregram/throttler`)
+- `puregram-file-id` — `@puregram/file-id` (parse / inspect / serialize telegram `file_id` and `file_unique_id` strings)
+- `puregram-utils` — `@puregram/utils` (slot-machine value decoder + telegram web app init-data verification + deep-link helpers)
+- `puregram-inline-message-id` — `@puregram/inline-message-id` (TL parser for telegram's `inline_message_id` blob; zero puregram deps)
+- `puregram-stream` — `@puregram/stream` (stream LLM output to telegram via animated message drafts)
+- `puregram-throttler` — `@puregram/throttler` (outbound rate-limit middleware that keeps your bot under telegram's ~30 rps / per-chat / per-group soft limits; distinct from inbound `puregram-rate-limit`)
 
 ## tools
 
@@ -271,6 +279,8 @@ await tg.send(100, format`${bold('hello')} ${italic(userInput)}`)
 // auto-injects `entities`, no parse_mode header
 ```
 
+see `puregram-markup` for the full builder surface, the `html` / `htmlb` / `md` parsers, custom html tags, and the `Formatted` codec.
+
 ## updates
 
 an **update** is anything telegram pushes at your bot — a new message, an edited message, a callback-query press, an inline query, a poll vote, a chat-member change, etc. about 30 different kinds, each a discriminated subclass of the `Update` union.
@@ -421,7 +431,7 @@ plus:
 - **`onShutdown`** — graceful teardown, drains in-flight
 - **`onDispatchError`** — registered via `tg.catch(fn)`; sees errors thrown inside dispatched handlers
 
-plugins lean on hooks all the time — `@puregram/markup` uses `onBeforeRequest` to unwrap its tagged-template formatted text into `entities`, `@puregram/media-cacher` uses it to swap upload sources for cached `file_id`s, `@puregram/rate-limit` uses `onUpdate` with `'high'` priority to short-circuit.
+plugins lean on hooks all the time — `@puregram/markup` uses `onBeforeRequest` to unwrap its tagged-template formatted text into `entities`, `@puregram/media-cacher` uses it to swap upload sources for cached `file_id`s, `@puregram/rate-limit` uses `onUpdate` with `'high'` priority to short-circuit. see `puregram-media-cacher` for the cache-install + key-derivation + auto-evict mechanics, and `puregram-rate-limit` for the filter / middleware / imperative `tg.rateLimit.check` call shapes.
 
 ## plugins (`.extend`)
 
