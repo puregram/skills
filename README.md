@@ -49,4 +49,4 @@ these skills track [`puregram@3`](https://github.com/nitreojs/puregram) and **mu
 
 ## license
 
-WTFPL — same as puregram itself.
+MPL-2.0 — same as puregram itself.
