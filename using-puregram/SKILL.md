@@ -226,7 +226,24 @@ await tg.api.sendMediaGroup({
 
 document and audio groups must be uniform; photos and videos can mix freely.
 
-inline-query and inline-message factories: `InlineQueryResult.{article,photo,video,audio,voice,document,gif,mpeg4Gif,location,venue,contact,game}` plus `InlineQueryResult.cached.X`, and `InputMessageContent.{text,location,venue,contact,invoice}`. these are the **only** factories that diverge from snake_case bot-api naming — they camelCase three fields (`input_message_content` → `content`, `reply_markup` → `replyMarkup`, the `thumbnail_*` group → `thumbnail: { url, width?, height?, mimeType? }`).
+inline-query and inline-message factories: `InlineQueryResult.{article,photo,video,audio,voice,document,gif,mpeg4Gif,location,venue,contact,game}` plus `InlineQueryResult.cached.X`, and `InputMessageContent.{text,location,venue,contact,invoice}`.
+
+**factory naming convention** (holds for every factory): required fields are positional, the optional extras bag is camelCase mirroring the bot-api field one-to-one (`parseMode`, `showAboveText`, `canSendMessages`, `allowSendingWithoutReply`, ...). two spots rename beyond plain camelCasing: `InlineQueryResult.*` flattens `input_message_content` → `content` and the `thumbnail_*` group → `thumbnail: { url, width?, height?, mimeType? }`; and `InputPollOption.text(text, { parseMode?, entities?, media? })` drops the bot-api `text_` prefix so its formatting extras read like `InputMessageContent.text`.
+
+## other factories
+
+beyond the media/inline factories above, core ships these (same positional-required + camelCase-extras convention; see `README.md` for full option tables):
+
+- `ReplyParameters.{to,cross,quote}` → `reply_parameters`. `to(messageId)` same-chat reply, `cross(chatId, messageId)` reply across chats, `quote(messageId, quote)` reply with an excerpt
+- `LinkPreview.{disabled,url,large,small}` → `link_preview_options`. `disabled()`, `url(url)`, or `large(url)` / `small(url)` to force preview media size
+- `ChatPermissions.{allowAll,denyAll}(overrides?)` — every permission flipped on/off; `overrides` (camelCase flags) tweaks individual ones
+- `ChatAdministratorRights.{allowAll,denyAll}(overrides?)` — same shape, for admin-promotion rights
+- `InputSticker.{static,animated,video}(sticker, emojiList, extras?)` — sticker-set items; `sticker` is a `MediaSource`/`attach://` ref, `emojiList` positional
+- `InputPollOption.text(text, { parseMode?, entities?, media? })` — one `sendPoll` option; formatting plus the bot-api 10.0 `media` field
+- `LabeledPrice.of(label, amount)` and `ShippingOption.of(id, title, prices)` — invoice / shipping building blocks
+- `BotCommands.command(command, description)` plus `BotCommands.scope.{default,allPrivateChats,allGroupChats,allChatAdministrators,chat,chatAdministrators,chatMember}` for scoping `setMyCommands`
+- `MenuButton.{default,commands,webApp}` — chat menu button (`webApp(text, url)`)
+- `Reaction.{emoji,customEmoji,paid}` — reaction types for `setMessageReaction`
 
 ## keyboards
 
@@ -289,11 +306,12 @@ every update class is **codegen'd** from the bot-api schema, so:
 
 - primitive fields are direct getters: `message.text`, `message.messageId`, `callbackQuery.data`
 - nested-object fields are lazy + memoized wrappers: `message.from` (a `User`), `message.chat` (a `Chat`)
-- per-kind shortcuts are attached as methods: `message.send(...)`, `message.edit(...)`, `message.delete()`, `callbackQuery.answer(...)`
+- per-kind shortcuts are attached as methods: `message.send(...)`, `message.reply(...)`, `message.edit(...)`, `message.delete()`, `callbackQuery.answer(...)`
 - `update.kind` is a literal-typed discriminant, `update.is('message')` narrows the type, `update.raw` is always the bot-api payload as-is
 
 ```ts
 tg.onMessage(message => message.send('got it'))
+tg.onMessage(message => message.reply('quoting you'))
 tg.onCallbackQuery(callbackQuery => callbackQuery.answer({ text: 'thanks' }))
 tg.onInlineQuery(inlineQuery => inlineQuery.answer({ results: [] }))
 
@@ -303,6 +321,27 @@ tg.onUpdate((update) => {
     return update.send(`echo: ${update.text}`)
   }
 })
+```
+
+### `reply` / `replyWith<Media>`
+
+on message-bearing kinds every `send`-family shortcut has a **reply twin** that auto-fills `reply_parameters.message_id` with the current message — `reply` mirrors `send` (text), and each `sendX` gets a `replyWithX`:
+
+```ts
+tg.onMessage(message => message.reply('text reply'))
+tg.onMessage(message => message.replyWithPhoto(MediaSource.path('./cat.jpg'), { caption: 'as a reply' }))
+tg.onMessage(message => message.replyWithDocument(doc))
+tg.onMessage(message => message.replyWithMediaGroup(media))
+```
+
+`replyWithAudio`, `replyWithVideo`, `replyWithAnimation`, `replyWithVoice`, `replyWithVideoNote`, `replyWithSticker`, `replyWithLocation`, `replyWithVenue`, `replyWithContact`, `replyWithDice`, `replyWithPoll`, etc. exist for the whole family — anything `tg.api.sendX` accepts `reply_parameters` for. signatures match the matching `send` shortcut exactly; the only difference is the injected `reply_parameters`.
+
+you can still pass `reply_parameters` to customize the reply (quote, `allow_sending_without_reply`, cross-chat) — your fields merge over the injected `message_id`, which you can also override:
+
+```ts
+import { ReplyParameters } from 'puregram'
+
+message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
 
 every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
@@ -728,7 +767,7 @@ await tg.startPolling()
 
 four things to notice:
 
-1. `message.sendPhoto(photo, params?)` is the per-update shortcut — `chat_id` is auto-filled from `message.chat.id`, photo is positional, everything else goes in `params?`
+1. `message.sendPhoto(photo, params?)` is the per-update shortcut — `chat_id` is auto-filled from `message.chat.id`, photo is positional, everything else goes in `params?`. `message.replyWithPhoto(photo, params?)` is the reply twin (same signature, auto-fills `reply_parameters`)
 2. `HTML.spoiler(text)` returns escaped HTML; pair with `parse_mode: 'HTML'`. for entity-aware formatting without a `parse_mode` header, use `@puregram/markup` (`format\`${spoiler('...')}\``)
 3. `Press.button({ text, ...payload })` builds an inline button with binary-packed `callback_data` (no JSON, no manual parsing). `reply_markup` accepts both the raw `{ inline_keyboard: [[...]] }` shape and `InlineKeyboard.keyboard([[...]])` — pick whichever's prettier at the call site
 4. `Press.filter` is dispatch-ready — pass it to `tg.onCallbackQuery(...)` and the handler's `q.payload` is fully typed and validated
