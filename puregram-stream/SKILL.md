@@ -32,7 +32,7 @@ mental model — every chunk yielded by the source flows into a *draft* (telegra
 - you want `AbortSignal`-driven cancellation that still finalizes the last-good draft
 - you want a tested abort/error/backoff model instead of writing the `setTimeout` + `editMessageText` loop yourself
 
-**private chats only** — telegram only allows `sendMessageDraft` in private chats. the plugin throws synchronously *before consuming the source* if you target a group, channel, or forum thread. a `streamEdit`-based fallback for groups is planned.
+**private chats only** — telegram only allows `sendMessageDraft` in private chats. the plugin throws synchronously *before consuming the source* if you target a group, channel, or forum thread. in those chats, send a regular message with `tg.send` / `update.send` instead.
 
 ## quick start
 
