@@ -621,11 +621,13 @@ key options:
 - `allowedUpdates` — restrict the kinds of updates telegram delivers (use `UpdatesFilter.all()` for "literally every kind including opt-in ones like `chat_member`")
 - `dropPendingUpdates` — `true` to drop the queued backlog, or a `string[]` to drop only specific kinds
 - `concurrency` — cap concurrent dispatches (default `Infinity`)
+- `maxInFlight` — backpressure; stop pulling new updates while this many dispatches are in flight (running + queued), resume as they settle (default `Infinity`). `concurrency` bounds what *runs*, `maxInFlight` bounds *running + queued* by pausing `getUpdates` — telegram holds the backlog server-side so memory stays flat under overload
 - `sequentializeBy: (raw) => string | undefined` — return a key; updates sharing that key dispatch in FIFO order, different keys still run in parallel subject to `concurrency`. handy for "updates from the same chat run serially when the handler mutates per-chat state"
 
 ```ts
 await tg.startPolling({
   concurrency: 8,
+  maxInFlight: 64,
   sequentializeBy: (raw) =>
     String(raw.message?.chat.id ?? raw.callback_query?.message?.chat.id ?? '')
 })
