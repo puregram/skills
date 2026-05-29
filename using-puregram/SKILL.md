@@ -805,7 +805,9 @@ PUREGRAM_DEBUG='puregram:*' node index.js
 PUREGRAM_DEBUG='puregram:api,puregram:dispatch' node index.js
 ```
 
-namespaces: `puregram:api`, `puregram:dispatch`, `puregram:hooks`, `puregram:plugin`, `puregram:transport:polling`, `puregram:transport:webhook`. comma-separated, supports `*` wildcards. logs go to `stderr`.
+namespaces: `puregram:api`, `puregram:dispatch`, `puregram:polling`, `puregram:webhook`. comma-separated, supports `*` wildcards. logs go to `stderr`.
+
+`puregram:api` prints the method + result (`<- sendMessage ok=false error_code=400 description=...` on failure); `puregram:api:raw` adds full request params and the complete raw response body — noisy, but it's what you paste when a call does something weird. `puregram:*` captures it too.
 
 ## typescript usage
 
