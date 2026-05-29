@@ -240,6 +240,38 @@ message.scene.state.age = parsed
 return message.scene.step.next()
 ```
 
+## branching scenes — the hub-and-spoke pattern
+
+real wizards rarely walk a straight line. the common shape is a **hub** (a menu the user keeps returning to) with **spokes** (sub-screens you dive into and come back from), plus a confirmation screen you can bounce back from to fix a single field. `scene.step.go(id)` is what makes this work — steps are **destinations**, not a forward-only queue.
+
+the trick for "edit one field, then return to where i was" is a return target stashed in `scene.state` before diving into a spoke:
+
+```ts
+enum Step { Menu = 0, Type = 1, Confirm = 2 }
+
+// in the menu step — opening the type sub-screen:
+update.scene.state.returnTo = Step.Menu
+return update.scene.step.go(Step.Type)
+
+// in the confirm step — the per-field "✏️ edit type" button:
+update.scene.state.returnTo = Step.Confirm
+return update.scene.step.go(Step.Type)
+
+// the type step, once it captures a value, returns to wherever it was opened from:
+update.scene.state.type = picked
+return update.scene.step.go(update.scene.state.returnTo ?? Step.Menu)
+```
+
+one `returnTo` field, two behaviors: the same sub-screen returns to the menu when reached from the menu, and to the confirmation screen when reached from confirm.
+
+other techniques the same flow leans on:
+
+- **one morphing "control panel" message** — stash the menu's `message_id` in `scene.state` and `editMessageText` it on every screen change instead of spamming new messages. an in-place toggle (✅/▫️) just flips a boolean in state and redraws that one message
+- **mixed update kinds in one scene** — `StepScene<State, MessageUpdate | CallbackQueryUpdate>`; narrow per step with `update.is('message')` / `update.is('callback_query')`, and `answer()` taps to clear the spinner
+- **submit → another chat** — on the final step `update.api.sendMessage({ chat_id: ORDERS_CHAT, ... })`, then `scene.leave()`
+
+full worked example (contact request → preferences hub → type sub-menu → engraving free-text → gift-wrap toggle → per-field-editable confirmation → submit-to-chat): [`examples/recipes/order-wizard`](https://github.com/nitreojs/puregram/tree/v3/examples/recipes/order-wizard).
+
 ## `tg.scenes` — runtime registry
 
 ```ts
@@ -398,4 +430,5 @@ import type {
 - sibling: `puregram-session` — required dependency; scenes state lives on the session
 - sibling: `puregram-flow` — for one-off `prompt`/`waitFor` without ordered steps
 - sibling: `puregram-storage` — backing store contract; pair with a persistent backend if you want scenes to survive restarts
+- worked example: [`examples/recipes/order-wizard`](https://github.com/nitreojs/puregram/tree/v3/examples/recipes/order-wizard) — branching hub-and-spoke wizard (sub-menus, in-place toggle, per-field edit, submit-to-chat)
 - package source: [`packages/scenes/`](https://github.com/nitreojs/puregram/tree/v3/packages/scenes)

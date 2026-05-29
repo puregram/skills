@@ -161,6 +161,8 @@ tg.command('cancel', (message) => {
 await tg.startPolling()
 ```
 
+for a non-linear flow — a hub menu with sub-screens, an in-place toggle, and a per-field-editable confirmation — see the branching [`order-wizard`](https://github.com/nitreojs/puregram/tree/v3/examples/recipes/order-wizard) recipe and the hub-and-spoke section in the `puregram-scenes` skill.
+
 ## 6. persistent flow that survives a bot restart
 
 three steps chained via `ctx.open(...)`. handlers registered at module scope, state in storage. **kill the bot between steps and it picks up where it left off**:
