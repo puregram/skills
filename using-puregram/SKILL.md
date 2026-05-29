@@ -287,6 +287,8 @@ await tg.send(100, MarkdownV2.bold('hi'), { parse_mode: 'MarkdownV2' })
 
 each class exposes the canonical set: `bold`, `italic`, `underline`, `strikethrough`, `spoiler`, `code`, `pre`, `link`, `mention`, `blockquote`, `expandableBlockquote`, plus `escape` for raw user input.
 
+`parse_mode` (and the `*_parse_mode` variants) is typed `'HTML' | 'Markdown' | 'MarkdownV2' | (string & {})` — the canonical values autocomplete, but it stays a soft enum since telegram matches case-insensitively, so any string still typechecks.
+
 for a tagged-template api with chained styles that composes message entities directly (no `parse_mode` needed) — look at `@puregram/markup`. example:
 
 ```ts
