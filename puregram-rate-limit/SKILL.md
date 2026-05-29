@@ -7,7 +7,7 @@ description: >
   shapes (`rateLimitFilter` / `rateLimitMiddleware` / `tg.rateLimit.check`),
   per-command `bucket`s, the raw `tg.rateLimit.hit(key, limit, window)`
   primitive, `tg.rateLimit.reset` / `resolveKey`, `onLimitExceeded` resolution
-  order (per-call > plugin > silent), custom `getKey` for per-chat / per-thread
+  order (per-call > plugin > silent), custom `getStorageKey` for per-chat / per-thread
   scoping, and swap-in persistent `KVStorage<RateLimitEntry>` backends.
 metadata:
   author: nitreojs
@@ -28,7 +28,7 @@ each user-bucket pair has its own counter — `limit` hits within `window` secon
 - you want a global cap on a class of updates (`every message`, `every callback`) — middleware form
 - you want gating decisions made imperatively inside a handler based on payload state — `tg.rateLimit.check`
 - you want raw bucket access for per-app or per-resource counters (`tg.rateLimit.hit('global', 1000, 60)`)
-- you need to scope by chat or by thread instead of by user — custom `getKey`
+- you need to scope by chat or by thread instead of by user — custom `getStorageKey`
 - you want persistent counters that survive restarts — swap in a `KVStorage<RateLimitEntry>`
 
 **distinct from `@puregram/throttler`** — that one paces *outbound* api calls (your bot's `sendMessage`s under telegram's per-chat 30/s ceiling). this one gates *inbound* updates (incoming messages from users hitting your bot). they don't overlap and you can run both.
@@ -212,7 +212,7 @@ tg.onMessage(
 
 `update` is typed as `AnyUpdate` — every wrapped update kind plus custom updates. cast or check `'send' in update` if you want to reply.
 
-## key derivation — `getKey`
+## key derivation — `getStorageKey`
 
 default: `from.id ?? senderChat.id ?? chat.id`. return `undefined` to leave an update unkeyable (passes through filters/middleware untouched).
 
@@ -220,7 +220,7 @@ default: `from.id ?? senderChat.id ?? chat.id`. return `undefined` to leave an u
 
 ```ts
 rateLimit({
-  getKey: (update) => {
+  getStorageKey: (update) => {
     if ('chat' in update && update.chat !== undefined) {
       return `chat:${update.chat.id}`
     }
@@ -234,7 +234,7 @@ rateLimit({
 
 ```ts
 rateLimit({
-  getKey: (update) => {
+  getStorageKey: (update) => {
     if ('messageThreadId' in update && update.messageThreadId !== undefined) {
       return `thread:${update.chat?.id}:${update.messageThreadId}`
     }
@@ -251,7 +251,7 @@ rateLimit({
 | option | type | description |
 |---|---|---|
 | `storage` | `KVStorage<RateLimitEntry>` | backing store. default: a fresh `MemoryStorage<RateLimitEntry>`. swap in `LruMemoryStorage` for bounded memory, redis / sqlite / etc for persistence |
-| `getKey` | `(update) => string \| undefined` | how to derive the per-user key. default: `from.id ?? senderChat.id ?? chat.id`. return `undefined` to skip |
+| `getStorageKey` | `(update) => string \| undefined` | how to derive the per-user key. default: `from.id ?? senderChat.id ?? chat.id`. return `undefined` to skip |
 | `onLimitExceeded` | `(update, retryAfter) => void \| Promise<void>` | plugin-level fallback callback. fires once per blocked update from filter/middleware paths |
 
 ### per-call — `RateLimitCheckOptions`
