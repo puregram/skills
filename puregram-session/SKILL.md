@@ -9,13 +9,13 @@ description: >
   `@puregram/storage`.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/session
+  source: https://github.com/puregram/puregram/tree/v3/packages/session
   package: "@puregram/session@3"
 ---
 
 # `@puregram/session`
 
-per-user (or per-chat / per-thread) state plugin for puregram v3. attaches a proxied bag of data as `update.session`; reads and writes persist transparently when the handler returns. backing store is pluggable — defaults to in-memory, swap in any [`KVStorage<V>`](https://github.com/nitreojs/puregram/tree/v3/packages/storage) (redis, sqlite, file, cloudflare kv, custom).
+per-user (or per-chat / per-thread) state plugin for puregram v3. attaches a proxied bag of data as `update.session`; reads and writes persist transparently when the handler returns. backing store is pluggable — defaults to in-memory, swap in any [`KVStorage<V>`](https://github.com/puregram/puregram/tree/v3/packages/storage) (redis, sqlite, file, cloudflare kv, custom).
 
 ## when to use this skill
 
@@ -325,4 +325,4 @@ import type {
 - sibling: `puregram-scenes` — multi-step wizards built on top of session
 - sibling: `puregram-flow` — `waitFor` / `prompt` conversational primitives
 - sibling: `puregram-storage` — the `KVStorage<V>` / `TtlStorage<V>` contract, `MemoryStorage`, `LruMemoryStorage`, `enhanceStorage` migrations, custom adapters
-- package source: [`packages/session/`](https://github.com/nitreojs/puregram/tree/v3/packages/session)
+- package source: [`packages/session/`](https://github.com/puregram/puregram/tree/v3/packages/session)

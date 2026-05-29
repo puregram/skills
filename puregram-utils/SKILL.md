@@ -11,7 +11,7 @@ description: >
   `https://t.me/...` deep-links with validated inputs.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/utils
+  source: https://github.com/puregram/puregram/tree/v3/packages/utils
   package: "@puregram/utils@3"
 ---
 
@@ -239,4 +239,4 @@ import type {
 
 - main skill: `using-puregram` — covers `message.hasDice()` and dice-update handling
 - sibling: `puregram-callback-data` — typed `callback_data` payloads, the other "structured t.me-flow" plugin (start payloads are often paired with callback flows)
-- package source: [`packages/utils/`](https://github.com/nitreojs/puregram/tree/v3/packages/utils)
+- package source: [`packages/utils/`](https://github.com/puregram/puregram/tree/v3/packages/utils)

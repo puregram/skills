@@ -10,7 +10,7 @@ description: >
   `tg.flow.*` explicit chat/from outside.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/flow
+  source: https://github.com/puregram/puregram/tree/v3/packages/flow
   package: "@puregram/flow@3"
 ---
 
@@ -696,4 +696,4 @@ import type {
 - sibling: `puregram-session` — stateful counterpart for state that *isn't* tied to a pending waiter
 - sibling: `puregram-scenes` — rich multi-step wizards with branching, on-enter/on-leave
 - sibling: `puregram-storage` — the `KVStorage<V>` contract that persistent flows are backed by
-- package source: [`packages/flow/`](https://github.com/nitreojs/puregram/tree/v3/packages/flow)
+- package source: [`packages/flow/`](https://github.com/puregram/puregram/tree/v3/packages/flow)

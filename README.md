@@ -1,6 +1,6 @@
 # puregram skills
 
-agent-installable skills for [`puregram`](https://github.com/nitreojs/puregram) v3 — a thin, type-safe wrapper around the [telegram bot api](https://core.telegram.org/bots/api).
+agent-installable skills for [`puregram`](https://github.com/puregram/puregram) v3 — a thin, type-safe wrapper around the [telegram bot api](https://core.telegram.org/bots/api).
 
 these skills are designed for [skills.sh](https://skills.sh) and any agent-skill runtime that follows the same shape (claude code, codex, etc.).
 
@@ -45,7 +45,7 @@ each tool supports `--help` and most support `--list`.
 
 ## relationship to puregram
 
-these skills track [`puregram@3`](https://github.com/nitreojs/puregram) and **must stay in sync with package source** — when a public api in any `@puregram/*` package changes, the matching skill is updated in the same release. drift in either direction is a bug.
+these skills track [`puregram@3`](https://github.com/puregram/puregram) and **must stay in sync with package source** — when a public api in any `@puregram/*` package changes, the matching skill is updated in the same release. drift in either direction is a bug.
 
 ## license
 

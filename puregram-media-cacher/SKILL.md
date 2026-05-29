@@ -10,7 +10,7 @@ description: >
   the deduped re-upload behavior under concurrency.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/media-cacher
+  source: https://github.com/puregram/puregram/tree/v3/packages/media-cacher
   package: "@puregram/media-cacher@3"
 ---
 
@@ -239,4 +239,4 @@ interface MediaCacherExtension {
 - main skill: `using-puregram` — covers `MediaSource.*`, the request-hook model, `.extend(plugin)`
 - sibling: `puregram-storage` — the `KVStorage<V>` contract that backs the cache, plus `LruMemoryStorage` and `enhanceStorage` migrations
 - sibling: `puregram-file-id` — parse / inspect the `file_id`s the cache stores, when you want to know which dc / type they belong to
-- package source: [`packages/media-cacher/`](https://github.com/nitreojs/puregram/tree/v3/packages/media-cacher)
+- package source: [`packages/media-cacher/`](https://github.com/puregram/puregram/tree/v3/packages/media-cacher)

@@ -10,7 +10,7 @@ description: >
   escapes. hard-depends on `@puregram/session`.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/scenes
+  source: https://github.com/puregram/puregram/tree/v3/packages/scenes
   package: "@puregram/scenes@3"
 ---
 
@@ -270,7 +270,7 @@ other techniques the same flow leans on:
 - **mixed update kinds in one scene** — `StepScene<State, MessageUpdate | CallbackQueryUpdate>`; narrow per step with `update.is('message')` / `update.is('callback_query')`, and `answer()` taps to clear the spinner
 - **submit → another chat** — on the final step `update.api.sendMessage({ chat_id: ORDERS_CHAT, ... })`, then `scene.leave()`
 
-full worked example (contact request → preferences hub → type sub-menu → engraving free-text → gift-wrap toggle → per-field-editable confirmation → submit-to-chat): [`examples/recipes/order-wizard`](https://github.com/nitreojs/puregram/tree/v3/examples/recipes/order-wizard).
+full worked example (contact request → preferences hub → type sub-menu → engraving free-text → gift-wrap toggle → per-field-editable confirmation → submit-to-chat): [`examples/recipes/order-wizard`](https://github.com/puregram/puregram/tree/v3/examples/recipes/order-wizard).
 
 ## `tg.scenes` — runtime registry
 
@@ -430,5 +430,5 @@ import type {
 - sibling: `puregram-session` — required dependency; scenes state lives on the session
 - sibling: `puregram-flow` — for one-off `prompt`/`waitFor` without ordered steps
 - sibling: `puregram-storage` — backing store contract; pair with a persistent backend if you want scenes to survive restarts
-- worked example: [`examples/recipes/order-wizard`](https://github.com/nitreojs/puregram/tree/v3/examples/recipes/order-wizard) — branching hub-and-spoke wizard (sub-menus, in-place toggle, per-field edit, submit-to-chat)
-- package source: [`packages/scenes/`](https://github.com/nitreojs/puregram/tree/v3/packages/scenes)
+- worked example: [`examples/recipes/order-wizard`](https://github.com/puregram/puregram/tree/v3/examples/recipes/order-wizard) — branching hub-and-spoke wizard (sub-menus, in-place toggle, per-field edit, submit-to-chat)
+- package source: [`packages/scenes/`](https://github.com/puregram/puregram/tree/v3/packages/scenes)

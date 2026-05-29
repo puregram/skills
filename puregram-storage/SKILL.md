@@ -9,7 +9,7 @@ description: >
   `@puregram/storage-redis` / `@puregram/storage-sqlite` packages.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/storage
+  source: https://github.com/puregram/puregram/tree/v3/packages/storage
   package: "@puregram/storage@3"
 ---
 
@@ -277,8 +277,8 @@ use it when:
 
 | package | backend | native ttl |
 |---|---|---|
-| [`@puregram/storage-redis`](https://github.com/nitreojs/puregram/tree/v3/packages/storage/storages/redis) | redis via `ioredis` | `PX` / `PEXPIRE` |
-| [`@puregram/storage-sqlite`](https://github.com/nitreojs/puregram/tree/v3/packages/storage/storages/sqlite) | sqlite via `better-sqlite3` | `expires_at` column + optional sweep |
+| [`@puregram/storage-redis`](https://github.com/puregram/puregram/tree/v3/packages/storage/storages/redis) | redis via `ioredis` | `PX` / `PEXPIRE` |
+| [`@puregram/storage-sqlite`](https://github.com/puregram/puregram/tree/v3/packages/storage/storages/sqlite) | sqlite via `better-sqlite3` | `expires_at` column + optional sweep |
 
 ```sh
 $ yarn add @puregram/storage-redis ioredis
@@ -329,6 +329,6 @@ import type {
 
 - main skill: `using-puregram` — covers `.extend(plugin)`, the Telegram client, dispatch model
 - sibling: `puregram-session` — proxy-based session plugin built on `KVStorage`
-- package source: [`packages/storage/`](https://github.com/nitreojs/puregram/tree/v3/packages/storage)
-- redis adapter: [`@puregram/storage-redis`](https://github.com/nitreojs/puregram/tree/v3/packages/storage/storages/redis)
-- sqlite adapter: [`@puregram/storage-sqlite`](https://github.com/nitreojs/puregram/tree/v3/packages/storage/storages/sqlite)
+- package source: [`packages/storage/`](https://github.com/puregram/puregram/tree/v3/packages/storage)
+- redis adapter: [`@puregram/storage-redis`](https://github.com/puregram/puregram/tree/v3/packages/storage/storages/redis)
+- sqlite adapter: [`@puregram/storage-sqlite`](https://github.com/puregram/puregram/tree/v3/packages/storage/storages/sqlite)

@@ -161,7 +161,7 @@ tg.command('cancel', (message) => {
 await tg.startPolling()
 ```
 
-for a non-linear flow — a hub menu with sub-screens, an in-place toggle, and a per-field-editable confirmation — see the branching [`order-wizard`](https://github.com/nitreojs/puregram/tree/v3/examples/recipes/order-wizard) recipe and the hub-and-spoke section in the `puregram-scenes` skill.
+for a non-linear flow — a hub menu with sub-screens, an in-place toggle, and a per-field-editable confirmation — see the branching [`order-wizard`](https://github.com/puregram/puregram/tree/v3/examples/recipes/order-wizard) recipe and the hub-and-spoke section in the `puregram-scenes` skill.
 
 ## 6. persistent flow that survives a bot restart
 
@@ -499,5 +499,5 @@ for plugins that need lifecycle hooks (background tasks, periodic flushes), use 
 
 - main skill: [`using-puregram`](../SKILL.md)
 - sibling skills: `puregram-flow`, `puregram-scenes`, `puregram-session`, `puregram-storage`, `puregram-callback-data`, `puregram-testing`
-- examples directory: [`github.com/nitreojs/puregram/tree/v3/examples`](https://github.com/nitreojs/puregram/tree/v3/examples)
+- examples directory: [`github.com/puregram/puregram/tree/v3/examples`](https://github.com/puregram/puregram/tree/v3/examples)
 - bot api reference: [`core.telegram.org/bots/api`](https://core.telegram.org/bots/api)

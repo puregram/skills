@@ -11,7 +11,7 @@ description: >
   `InlineMessageIdParseError`.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/inline-message-id
+  source: https://github.com/puregram/puregram/tree/v3/packages/inline-message-id
   package: "@puregram/inline-message-id@3"
 ---
 
@@ -189,4 +189,4 @@ import type {
 - main skill: `using-puregram` — covers `tg.onInlineQuery` / `tg.onChosenInlineResult`, `InlineQueryResult.*`, `InputMessageContent.*`, `InlineKeyboard`
 - sibling: `puregram-file-id` — the matching TL parser for `file_id` and `file_unique_id`
 - sibling: `puregram-callback-data` — typed `callback_data` payloads (the other "decode the opaque telegram string" plugin, but for buttons not inline messages)
-- package source: [`packages/inline-message-id/`](https://github.com/nitreojs/puregram/tree/v3/packages/inline-message-id)
+- package source: [`packages/inline-message-id/`](https://github.com/puregram/puregram/tree/v3/packages/inline-message-id)

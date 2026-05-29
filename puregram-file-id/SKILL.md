@@ -12,7 +12,7 @@ description: >
   rle + base64url + TL primitives.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/file-id
+  source: https://github.com/puregram/puregram/tree/v3/packages/file-id
   package: "@puregram/file-id@3"
 ---
 
@@ -319,4 +319,4 @@ import type {
 - main skill: `using-puregram` — covers `MediaSource.fileId(...)`, where parsed `file_id`s are usually destined
 - sibling: `puregram-media-cacher` — the cache plugin stores `file_id` strings keyed by `(chatId, sourceValue)`; this parser is how you inspect what's actually in there
 - sibling: `puregram-inline-message-id` — the matching TL parser for inline-message ids
-- package source: [`packages/file-id/`](https://github.com/nitreojs/puregram/tree/v3/packages/file-id)
+- package source: [`packages/file-id/`](https://github.com/puregram/puregram/tree/v3/packages/file-id)

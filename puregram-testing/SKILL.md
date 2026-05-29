@@ -10,7 +10,7 @@ description: >
   `env.shutdown()`. assertion-library-agnostic.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/test
+  source: https://github.com/puregram/puregram/tree/v3/packages/test
   package: "@puregram/test@3"
 ---
 
@@ -541,4 +541,4 @@ import type {
 - sibling: `puregram-session` — pair with `strictDispatch: true` for catching missing handlers in scene/session flows
 - sibling: `puregram-flow` — pair `env.advanceTime` with `waitFor` timeouts and persistent flow ttls
 - sibling: `puregram-scenes` — `strictDispatch` is especially useful here to catch unhandled steps
-- package source: [`packages/test/`](https://github.com/nitreojs/puregram/tree/v3/packages/test)
+- package source: [`packages/test/`](https://github.com/puregram/puregram/tree/v3/packages/test)

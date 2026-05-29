@@ -11,7 +11,7 @@ description: >
   scoping, and swap-in persistent `KVStorage<RateLimitEntry>` backends.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/rate-limit
+  source: https://github.com/puregram/puregram/tree/v3/packages/rate-limit
   package: "@puregram/rate-limit@3"
 ---
 
@@ -344,4 +344,4 @@ import type {
 - main skill: `using-puregram` — covers `.extend(plugin)`, filters, `and` / `or` / `not`, dispatch middleware
 - sibling: `puregram-storage` — the `KVStorage<V>` contract that backs the counter store
 - sibling: `puregram-callback-data` — typed `callback_data` flows often want a per-user gate on the resulting query
-- package source: [`packages/rate-limit/`](https://github.com/nitreojs/puregram/tree/v3/packages/rate-limit)
+- package source: [`packages/rate-limit/`](https://github.com/puregram/puregram/tree/v3/packages/rate-limit)

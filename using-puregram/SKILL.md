@@ -15,7 +15,7 @@ allowed-tools: >
   Bash(node *skills/using-puregram/tools/grep-source.mjs*)
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram
+  source: https://github.com/puregram/puregram
   bot_api: "10.0.0"
   package: "puregram@3"
 ---
@@ -72,7 +72,7 @@ node skills/using-puregram/tools/grep-source.mjs <pattern>   # scoped grep acros
 
 each tool supports `--help` and most support `--list`. for full reference depth, also read `node_modules/puregram/README.md` (~46 KB, ships with the package) — it has exhaustive option tables, factory menus, and live examples for every concept covered below.
 
-example folders aren't shipped on npm — fetch them from [`github.com/nitreojs/puregram/tree/v3/examples`](https://github.com/nitreojs/puregram/tree/v3/examples).
+example folders aren't shipped on npm — fetch them from [`github.com/puregram/puregram/tree/v3/examples`](https://github.com/puregram/puregram/tree/v3/examples).
 
 ## quick start
 
@@ -847,8 +847,8 @@ if you're porting a bot: read the new examples, write the migration by hand, fil
 
 ## see also
 
-- repo: [`github.com/nitreojs/puregram`](https://github.com/nitreojs/puregram)
-- examples: [`examples/`](https://github.com/nitreojs/puregram/tree/v3/examples)
-- per-package READMEs under [`packages/*/README.md`](https://github.com/nitreojs/puregram/tree/v3/packages)
+- repo: [`github.com/puregram/puregram`](https://github.com/puregram/puregram)
+- examples: [`examples/`](https://github.com/puregram/puregram/tree/v3/examples)
+- per-package READMEs under [`packages/*/README.md`](https://github.com/puregram/puregram/tree/v3/packages)
 - bot api reference: [core.telegram.org/bots/api](https://core.telegram.org/bots/api)
 - telegram chat: [`t.me/pureforum`](https://t.me/pureforum)

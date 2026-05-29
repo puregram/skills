@@ -9,7 +9,7 @@ description: >
   the optional `callbackData([...])` plugin for global slug-collision detection.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/callback-data
+  source: https://github.com/puregram/puregram/tree/v3/packages/callback-data
   package: "@puregram/callback-data@3"
 ---
 
@@ -301,4 +301,4 @@ import type {
 
 - main skill: `using-puregram` — covers `.extend(plugin)`, filters, `tg.onCallbackQuery`, inline keyboards
 - sibling: `puregram-flow` — persistent flows for state that survives restarts (state in storage, not in the button)
-- package source: [`packages/callback-data/`](https://github.com/nitreojs/puregram/tree/v3/packages/callback-data)
+- package source: [`packages/callback-data/`](https://github.com/puregram/puregram/tree/v3/packages/callback-data)

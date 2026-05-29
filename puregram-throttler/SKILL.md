@@ -11,7 +11,7 @@ description: >
   which gates inbound updates.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/throttler
+  source: https://github.com/puregram/puregram/tree/v3/packages/throttler
   package: "@puregram/throttler@3"
 ---
 
@@ -230,4 +230,4 @@ import type {
 
 - main skill: `using-puregram` — covers `.extend(plugin)`, hooks, `retryOnFloodWait`
 - sibling: `puregram-rate-limit` — **inbound** rate limiting (gating updates from your users). different problem; both plugins coexist cleanly
-- package source: [`packages/throttler/`](https://github.com/nitreojs/puregram/tree/v3/packages/throttler)
+- package source: [`packages/throttler/`](https://github.com/puregram/puregram/tree/v3/packages/throttler)

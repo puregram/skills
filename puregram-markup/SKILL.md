@@ -11,7 +11,7 @@ description: >
   `MarkupParseError`, and the chain rules telegram clients actually honor.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/markup
+  source: https://github.com/puregram/puregram/tree/v3/packages/markup
   package: "@puregram/markup@3"
 ---
 
@@ -124,7 +124,7 @@ curried-with-language is intentionally not supported — use the 2-arg eager for
 ### `link(text, url)` / `link(url)` — text links
 
 ```ts
-link('puregram on github', 'https://github.com/nitreojs/puregram')   // eager
+link('puregram on github', 'https://github.com/puregram/puregram')   // eager
 link('https://core.telegram.org/bots/api')`bot api docs`             // curried, tagged
 link('https://t.me/pureforum')('the forum')                          // curried, parens
 ```
@@ -390,4 +390,4 @@ import type {
 - main skill: `using-puregram` — covers `.extend(plugin)`, `MediaSource`, `tg.send` / `message.send`, the request-hook model markup plugs into
 - sibling: `puregram-stream` — uses markup for `parseMode: 'MarkdownV2' | 'HTML'` streaming
 - sibling: `puregram-callback-data` — typed `callback_data` payloads (unrelated to formatting but the other "structured content" plugin)
-- package source: [`packages/markup/`](https://github.com/nitreojs/puregram/tree/v3/packages/markup)
+- package source: [`packages/markup/`](https://github.com/puregram/puregram/tree/v3/packages/markup)

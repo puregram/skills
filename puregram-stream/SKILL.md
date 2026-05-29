@@ -13,7 +13,7 @@ description: >
   4096-char rollover, and the `StreamResult` return shape. private-chat-only.
 metadata:
   author: nitreojs
-  source: https://github.com/nitreojs/puregram/tree/v3/packages/stream
+  source: https://github.com/puregram/puregram/tree/v3/packages/stream
   package: "@puregram/stream@3"
 ---
 
@@ -282,4 +282,4 @@ import type {
 - main skill: `using-puregram` — covers `.extend(plugin)`, `update.send` / `tg.send`, `retryOnFloodWait`, the request-hook model
 - sibling: `puregram-markup` — required for `parseMode: 'MarkdownV2' | 'HTML'`. produces the `Formatted` shape that strict-parse rebuilds on finalize
 - sibling: `puregram-flow` — when you want a streaming response inside a `prompt` / `waitFor` flow (the abort signal can be wired to flow cancellation)
-- package source: [`packages/stream/`](https://github.com/nitreojs/puregram/tree/v3/packages/stream)
+- package source: [`packages/stream/`](https://github.com/puregram/puregram/tree/v3/packages/stream)
