@@ -10,7 +10,7 @@ description: >
 metadata:
   author: nitreojs
   source: https://github.com/puregram/puregram/tree/v3/packages/session
-  package: "@puregram/session@3"
+  package: "@puregram/session@4"
 ---
 
 # `@puregram/session`
