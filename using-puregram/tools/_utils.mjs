@@ -140,15 +140,19 @@ export function requireInstalled (pkg) {
   return dir
 }
 
-/** pick the latest semver-named json file in a schema directory */
+/** pick the latest version-named json file in a schema directory */
 export function pickLatestSchema (schemaDir) {
   if (!existsSync(schemaDir)) return null
-  const files = readdirSync(schemaDir).filter(f => /^\d+\.\d+\.\d+\.json$/.test(f))
+  // accepts the current `X.Y.json` and legacy `X.Y.Z.json` names; the `archive/` dir is ignored (no extension match)
+  const files = readdirSync(schemaDir).filter(f => /^\d+\.\d+(?:\.\d+)?\.json$/.test(f))
   if (files.length === 0) return null
   files.sort((a, b) => {
     const pa = a.replace('.json', '').split('.').map(Number)
     const pb = b.replace('.json', '').split('.').map(Number)
-    for (let i = 0; i < 3; i++) if (pa[i] !== pb[i]) return pb[i] - pa[i]
+    const len = Math.max(pa.length, pb.length)
+    for (let i = 0; i < len; i++) {
+      if ((pa[i] ?? 0) !== (pb[i] ?? 0)) return (pb[i] ?? 0) - (pa[i] ?? 0)
+    }
     return 0
   })
   return join(schemaDir, files[0])
