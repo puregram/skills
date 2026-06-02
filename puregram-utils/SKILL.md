@@ -210,6 +210,38 @@ deepLink.videoChat({ username: 'mychannel', hash: 'abc123', live: true })
 - **phone** (for `attachInChat`) — digits only, no `+` prefix
 - **share url / text** — free-form; these *are* `encodeURIComponent`-escaped
 
+## peer id conversion — bot api ↔ mtproto
+
+telegram clients, `t.me/c/…` links, and mtproto libs (mtcute, gramjs) use *bare*
+mtproto ids. the bot api uses *marked* ids where the sign / `-100…` prefix encodes
+the peer kind. these helpers convert and classify without a `getChat` call
+
+```ts
+import {
+  parsePeerId, toMtprotoId, toBotApiId,
+  getPeerType, isUserId, isChatId, isChannelId
+} from '@puregram/utils'
+
+parsePeerId(-1001234567890) // { type: 'channel', id: 1234567890 }
+toMtprotoId(-1001234567890) // 1234567890
+toBotApiId(1234567890, 'channel') // -1001234567890
+getPeerType(-987654321)     // 'chat'
+isChannelId(-1001234567890) // true
+```
+
+mapping: user `id` (positive) ↔ bare `id`; basic group `-id` ↔ bare `id`;
+supergroup/channel `-1000000000000 - id` ↔ bare `id`
+
+caveats:
+- `type` is coarse — `'channel'` is **supergroup OR broadcast channel** (same
+  `-100…` marking, indistinguishable from the id alone)
+- converting helpers throw `PeerIdError` on `0`, `-1000000000000`, non-integers,
+  unsafe integers (and `toBotApiId` on a non-positive bare id); `isXId` guards
+  return `false` instead
+- ranges are lenient (no upper-bound check) so future telegram id-ceiling bumps
+  keep working
+- plain `number` throughout — every valid id fits inside `Number.MAX_SAFE_INTEGER`
+
 ## exported surface
 
 ```ts
@@ -217,7 +249,10 @@ import {
   getCasinoValues, CasinoValue,
   WebApp,
   parseCommand,
-  deepLink
+  deepLink,
+  parsePeerId, toMtprotoId, toBotApiId,
+  getPeerType, isUserId, isChatId, isChannelId,
+  PeerIdError
 } from '@puregram/utils'
 
 import type {
@@ -225,6 +260,8 @@ import type {
   AttachChatTarget,
   AttachChooseTarget,
   ParsedCommand,
+  ParsedPeerId,            // { type, id }
+  PeerType,                // 'user' | 'chat' | 'channel'
   SlotMachineValue,        // readonly [CasinoValue, CasinoValue, CasinoValue]
   StartOpts, StartGroupOpts, StartChannelOpts,
   StartAppOpts, StartAttachOpts,
