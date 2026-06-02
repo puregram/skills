@@ -66,7 +66,7 @@ async function run ({ flags, name }) {
 }
 
 function printObject (o, version) {
-  const v = `bot api ${version.major}.${version.minor}.${version.patch}`
+  const v = `bot api ${version.major}.${version.minor}`
   console.log(`${o.name}  (${v})`)
   console.log(`  ${o.documentationLink}`)
   console.log()
