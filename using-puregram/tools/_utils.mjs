@@ -1,7 +1,9 @@
 import { createRequire } from 'node:module'
-import { existsSync, readdirSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
+// keep in sync with the sibling skill folders — every shipped skill maps to one
+// package here, so grep-source and check-version cover the whole surface
 export const PUREGRAM_PACKAGES = [
   'puregram',
   '@puregram/api',
@@ -9,11 +11,16 @@ export const PUREGRAM_PACKAGES = [
   '@puregram/scenes',
   '@puregram/session',
   '@puregram/storage',
+  '@puregram/storage-redis',
+  '@puregram/storage-sqlite',
   '@puregram/markup',
   '@puregram/callback-data',
   '@puregram/media-cacher',
   '@puregram/rate-limit',
+  '@puregram/throttler',
+  '@puregram/stream',
   '@puregram/file-id',
+  '@puregram/inline-message-id',
   '@puregram/utils',
   '@puregram/test'
 ]
@@ -156,6 +163,26 @@ export function pickLatestSchema (schemaDir) {
     return 0
   })
   return join(schemaDir, files[0])
+}
+
+/** read and parse a package.json, returning null if it isn't there */
+export function readPackageJson (dir) {
+  if (!dir) return null
+  const path = join(dir, 'package.json')
+  if (!existsSync(path)) return null
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+/** strip the leading `/**`, ` * `, and trailing `*​/` noise off a jsdoc block, dropping blank lines */
+export function cleanJsdoc (lines) {
+  return lines
+    .map(l => l.replace(/^\s*\/?\*+\/?/, '').replace(/\*\/\s*$/, '').trim())
+    .filter(l => l.length > 0)
+    .join('\n')
 }
 
 /** render a schema type node back into a readable signature */

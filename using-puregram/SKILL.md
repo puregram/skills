@@ -12,7 +12,10 @@ allowed-tools: >
   Bash(node *skills/using-puregram/tools/get-object.mjs*),
   Bash(node *skills/using-puregram/tools/get-update.mjs*),
   Bash(node *skills/using-puregram/tools/get-shortcut.mjs*),
-  Bash(node *skills/using-puregram/tools/grep-source.mjs*)
+  Bash(node *skills/using-puregram/tools/get-filter.mjs*),
+  Bash(node *skills/using-puregram/tools/get-factory.mjs*),
+  Bash(node *skills/using-puregram/tools/grep-source.mjs*),
+  Bash(node *skills/using-puregram/tools/check-version.mjs*)
 metadata:
   author: nitreojs
   source: https://github.com/puregram/puregram
@@ -67,7 +70,10 @@ node skills/using-puregram/tools/get-method.mjs <method>     # bot-api method �
 node skills/using-puregram/tools/get-object.mjs <name>       # bot-api object/structure → fields
 node skills/using-puregram/tools/get-update.mjs <kind|Class> # wrapped update class → helpers/shortcuts
 node skills/using-puregram/tools/get-shortcut.mjs <name>     # tg.send-family curated shortcut signatures
+node skills/using-puregram/tools/get-filter.mjs <name>       # dispatch filter → narrowing/usage (hasX, kind.X, command, ...)
+node skills/using-puregram/tools/get-factory.mjs <Name>      # factory class → static builder methods (MediaSource, InlineKeyboard, ...)
 node skills/using-puregram/tools/grep-source.mjs <pattern>   # scoped grep across installed puregram packages
+node skills/using-puregram/tools/check-version.mjs           # installed versions + bot-api drift vs this skill's pin
 ```
 
 each tool supports `--help` and most support `--list`. for full reference depth, also read `node_modules/puregram/README.md` (~46 KB, ships with the package) — it has exhaustive option tables, factory menus, and live examples for every concept covered below.
@@ -232,7 +238,7 @@ inline-query and inline-message factories: `InlineQueryResult.{article,photo,vid
 
 ## other factories
 
-beyond the media/inline factories above, core ships these (same positional-required + camelCase-extras convention; see `README.md` for full option tables):
+beyond the media/inline factories above, core ships these (same positional-required + camelCase-extras convention; see `README.md` for full option tables, or `node skills/using-puregram/tools/get-factory.mjs <Name>` for the exact static-method signatures of any factory):
 
 - `ReplyParameters.{to,cross,quote}` → `reply_parameters`. `to(messageId)` same-chat reply, `cross(chatId, messageId)` reply across chats, `quote(messageId, quote)` reply with an excerpt
 - `LinkPreview.{disabled,url,large,small}` → `link_preview_options`. `disabled()`, `url(url)`, or `large(url)` / `small(url)` to force preview media size
@@ -404,7 +410,9 @@ tg.onMessage(isWeekend, message => message.send('chill, it is the weekend'))
 
 declaring `kinds: ['message', 'edited_message']` on a custom filter gives the dispatcher a free fast-path — it skips evaluating the predicate when `update.kind` isn't in the set. the codegen'd `hasX` filters already do this.
 
-handcrafted filters available out of the box: `command`, `text`, `regex`, `chat`, `senderChat`, `from`, `callbackData`, `inlineQuery`. codegen'd ones: `kind.X` (one per kind), `hasX` (presence predicates for every nullable field).
+handcrafted filters available out of the box: `command`, `text`, `regex`, `chat`, `senderChat`, `from`, `callbackData`, `inlineQuery`, and many more (`start`, `startsWith`, `contains`, `caption`, `chatId`, `forum`, `fromBot`, `viaBot`, `kindIn`, ...). codegen'd ones: `kind.X` / `action.X` (one per update / service-event kind), `hasX` (presence predicates for every nullable field).
+
+run `node skills/using-puregram/tools/get-filter.mjs --list` to enumerate every filter (there are ~100+, most undocumented here), or `get-filter.mjs <name>` for a single filter's narrowing type and usage.
 
 ## middlewares
 
@@ -533,6 +541,8 @@ key things to know:
 - **lifecycle hooks**. `useHook('onInit', ...)` runs once installs settle; `useHook('onShutdown', ...)` runs on `tg.shutdown()`. that's the canonical place to spin background tasks up or tear them down
 
 ## custom updates
+
+**first — is the incoming kind already wrapped?** the generated schema covers the whole bot api, so a kind you don't recognize (newer, niche, or just unfamiliar) is usually already a first-class update with its own `tg.on<Kind>` dispatcher and typed getters — not something to hand-route. before reaching for the machinery below, confirm: `node skills/using-puregram/tools/get-update.mjs <kind>`, or just try `tg.on<Kind>(...)` (a real kind type-checks; a missing one is a compile error). the `defineUpdate`/`emit` path is **only** for events telegram never sends you.
 
 your bot may produce events that don't come from telegram — a webhook from a payment provider, a cron tick, an internal job-completion signal. instead of inventing a parallel event bus, teach `tg` about a custom kind and emit through the same dispatch pipeline as bot-api updates:
 

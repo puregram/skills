@@ -39,7 +39,10 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
     node using-puregram/tools/get-object.mjs Message         # bot-api object/structure → fields
     node using-puregram/tools/get-update.mjs message         # wrapped update class → helpers
     node using-puregram/tools/get-shortcut.mjs send          # tg.send-family shortcut signatures
+    node using-puregram/tools/get-filter.mjs hasText         # dispatch filter → narrowing + usage
+    node using-puregram/tools/get-factory.mjs MediaSource    # factory class → static builder methods
     node using-puregram/tools/grep-source.mjs MessageShared  # scoped grep across installed puregram packages
+    node using-puregram/tools/check-version.mjs              # installed versions + bot-api drift check
 
 each tool supports `--help` and most support `--list`.
 
