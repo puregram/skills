@@ -148,6 +148,29 @@ tg.onMessage((message) => {
 })
 ```
 
+### default request params
+
+set `defaultParams` once on the client to stop repeating params (most commonly `parse_mode`) at every call site. it merges into every outgoing call across all three layers. precedence is **call-site > per-method > `'*'`**; object-valued params replace wholesale (never deep-merged):
+
+```ts
+const tg = Telegram.fromToken(process.env.TOKEN!, {
+  defaultParams: {
+    // applied wherever the param is valid
+    '*': { parse_mode: 'HTML' },
+    // per-method, typed to that method's params, overrides '*'
+    sendMessage: { link_preview_options: { is_disabled: true } }
+  }
+})
+
+// parse_mode: 'HTML' added for you
+await tg.send(chatId, '<b>bold</b>')
+
+// the call site always wins
+await tg.api.sendMessage({ chat_id: chatId, text: '*x*', parse_mode: 'MarkdownV2' })
+```
+
+a `'*'` default only lands on methods that actually accept the param (it never adds `parse_mode` to `sendDice`), because core gates it against the schema's per-method param sets. constructor-only — there is no runtime setter.
+
 ### suppressing api errors
 
 by default, api errors throw an `ApiError`:
