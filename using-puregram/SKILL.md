@@ -30,7 +30,7 @@ puregram is a thin, type-safe wrapper around the [telegram bot api](https://core
 ## when to use this skill
 
 - authoring or modifying any telegram bot built on `puregram@3` or `@puregram/*`
-- calling bot api methods (`tg.api.sendMessage`, `tg.send`, `update.send`, `update.reply`)
+- calling bot api methods (`tg.api.sendMessage`, `tg.send`, `update.send`, `update.reply`, `update.thread`)
 - handling updates (`tg.onMessage`, `tg.onCallbackQuery`, `tg.on('inline_query')`, ...)
 - sending media (`MediaSource.path` / `.url` / `.fileId` / `.buffer` / `.stream`)
 - building keyboards (`Keyboard`, `InlineKeyboard`, `KeyboardBuilder`, `InlineKeyboardBuilder`)
@@ -374,6 +374,25 @@ import { ReplyParameters } from 'puregram'
 
 message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
+
+### `update.thread`
+
+message-bearing kinds expose `update.thread` — an opt-in namespace mirroring every thread-capable shortcut, auto-filling `message_thread_id` (plus `chat_id`, and `reply_parameters.message_id` on the reply twins) from the current message. it's `undefined` when the message isn't in a forum topic / thread, so use `?.` or narrow with `hasMessageThreadId()`:
+
+```ts
+tg.onMessage(async (message) => {
+  await message.thread?.send('stays in this topic')
+  await message.thread?.sendPhoto(MediaSource.path('./p.png'))
+  await message.thread?.reply('threaded reply')
+  await message.thread?.sendChatAction('typing')
+
+  if (message.hasMessageThreadId()) {
+    await message.thread.send('no ?. past the guard')
+  }
+})
+```
+
+covers the `send` / `reply` families, `copy` / `forward`, and forum-topic management (`editForumTopic`, `closeForumTopic`, ...) — everything whose `tg.api.X` accepts `message_thread_id`. plain `update.send(...)` never threads on its own; `thread` pins the current topic and takes no `message_thread_id` of its own, so to target a different thread use the top-level shortcut where it's a normal param: `message.send('x', { message_thread_id: 1234 })`.
 
 every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
 
