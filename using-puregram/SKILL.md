@@ -329,6 +329,27 @@ await tg.send(100, format`${bold('hello')} ${italic(userInput)}`)
 
 see `puregram-markup` for the full builder surface, the `html` / `htmlb` / `md` parsers, custom html tags, and the `Formatted` codec.
 
+## chat actions (typing / upload indicators)
+
+telegram clears a chat action after ~5s, so a long task needs `sendChatAction` re-fired on an interval. two helpers do that loop — on `tg` (pass a chat id) and on an update (`chat_id` auto-filled). both also take any extra `sendChatAction` params (e.g. `message_thread_id`).
+
+`withChatAction(action, fn, options?)` is the safe default — runs `fn` with the action on, stops it when `fn` settles (even on throw), returns `fn`'s result:
+
+```ts
+const answer = await message.withChatAction('typing', () => generateReply(message.text))
+const photo = await tg.withChatAction(chatId, 'upload_photo', () => buildPhoto())
+```
+
+`createActionController(action, options?)` returns a manual controller — `start()` / `stop()`, mutable `.action`, options `interval` (default `5000`), `wait` (default `0`), `timeout` (default `0`, off). it self-stops on a `sendChatAction` api error:
+
+```ts
+const controller = message.createActionController('typing', { interval: 4000 })
+controller.start()
+try { await longTask() } finally { controller.stop() }
+```
+
+exported: `ChatActionController` (class, from `puregram`), `ActionControllerLike` / `ActionControllerOptions` / `ActionControllerParams` (types, from `@puregram/api`).
+
 ## updates
 
 an **update** is anything telegram pushes at your bot — a new message, an edited message, a callback-query press, an inline query, a poll vote, a chat-member change, etc. about 30 different kinds, each a discriminated subclass of the `Update` union.
