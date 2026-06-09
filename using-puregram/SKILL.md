@@ -358,7 +358,7 @@ every update class is **codegen'd** from the bot-api schema, so:
 
 - primitive fields are direct getters: `message.text`, `message.messageId`, `callbackQuery.data`
 - nested-object fields are lazy + memoized wrappers: `message.from` (a `User`), `message.chat` (a `Chat`)
-- per-kind shortcuts are attached as methods: `message.send(...)`, `message.reply(...)`, `message.edit(...)`, `message.delete()`, `callbackQuery.answer(...)`
+- per-kind shortcuts are attached as methods: `message.send(...)`, `message.reply(...)`, `message.edit(...)`, `message.delete()`, `message.react('👍')` (emoji string or `TelegramReactionType[]`), `callbackQuery.answer(...)`
 - `update.kind` is a literal-typed discriminant, `update.is('message')` narrows the type, `update.raw` is always the bot-api payload as-is
 
 ```ts
@@ -417,7 +417,7 @@ covers the `send` / `reply` families, `copy` / `forward`, and forum-topic manage
 
 ### business connections
 
-`business_connection_id` is anchored automatically on every update shortcut that accepts it (`send`, `reply`, `edit*`, `pin`, `sendChatAction`, the `thread` namespace, …). a reply/edit on a `business_message` stays on that connection with no manual plumbing; it's filled only when the message has one, and excluded from the shortcut's `params`. to act as the bot rather than the business account, drop to `tg.api`:
+`business_connection_id` is anchored automatically on every update shortcut that accepts it (`send`, `reply`, `edit*`, `pin`, `sendChatAction`, `createActionController` / `withChatAction`, the `thread` namespace, …). a reply/edit on a `business_message` stays on that connection with no manual plumbing; it's filled only when the message has one, and excluded from the shortcut's `params`. to act as the bot rather than the business account, drop to `tg.api`:
 
 ```ts
 tg.onBusinessMessage(message => message.reply('on the connection'))   // + business_connection_id
