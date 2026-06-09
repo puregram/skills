@@ -415,6 +415,15 @@ tg.onMessage(async (message) => {
 
 covers the `send` / `reply` families, `copy` / `forward`, and forum-topic management (`editForumTopic`, `closeForumTopic`, ...) — everything whose `tg.api.X` accepts `message_thread_id`. plain `update.send(...)` never threads on its own; `thread` pins the current topic and takes no `message_thread_id` of its own, so to target a different thread use the top-level shortcut where it's a normal param: `message.send('x', { message_thread_id: 1234 })`.
 
+### business connections
+
+`business_connection_id` is anchored automatically on every update shortcut that accepts it (`send`, `reply`, `edit*`, `pin`, `sendChatAction`, the `thread` namespace, …). a reply/edit on a `business_message` stays on that connection with no manual plumbing; it's filled only when the message has one, and excluded from the shortcut's `params`. to act as the bot rather than the business account, drop to `tg.api`:
+
+```ts
+tg.onBusinessMessage(message => message.reply('on the connection'))   // + business_connection_id
+tg.onMessage(message => message.reply('regular'))                     // omitted (not a business msg)
+```
+
 every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
 
 use `node skills/using-puregram/tools/get-update.mjs <kind|ClassName>` to look up any wrapped update class — it prints all inherited getters/methods and shows the dispatcher name.
