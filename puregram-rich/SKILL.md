@@ -102,7 +102,7 @@ template strings are **dedented** — the common leading indentation shared by a
 
 **escape sets:**
 
-- markdown: backslash-escapes `` \ ` * _ ~ = | [ ] ( ) # > ! + - < ``
+- markdown: backslash-escapes `` \ ` * _ ~ = | [ ] ( ) # ! + - ``; `& < >` become numeric entities (telegram renders `\<` literally, but accepts entities)
 - html: `& < > "` → numeric entities (`&#38;` etc.)
 
 because strings are always escaped, `${userInput}` is safe in both dialects.
