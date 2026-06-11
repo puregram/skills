@@ -396,7 +396,7 @@ import { ReplyParameters } from 'puregram'
 message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
 
-**bot api 10.1 additions** — `update.sendRich` (alias of `sendRichMessage`) and its `replyWithRich` twin send an `InputRichMessage` you build as a raw `{ html }` or `{ markdown }` string telegram parses server-side; ergonomic builders are coming in `@puregram/rich`. `sendDraft` / `sendRichDraft` alias the verbose `send*MessageDraft` methods. on `chat_join_request` updates, `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })` auto-fill the join-request query id.
+**bot api 10.1 additions** — `update.sendRich` (alias of `sendRichMessage`) and its `replyWithRich` twin send an `InputRichMessage` you build as a raw `{ html }` or `{ markdown }` string telegram parses server-side; ergonomic builders are coming in `@puregram/rich`. `sendDraft` / `sendRichDraft` alias the verbose `send*MessageDraft` methods. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject the request directly (chat + user auto-filled); the guard-bot query flow adds `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })`, both auto-filling the join-request query id.
 
 ### `update.thread`
 
