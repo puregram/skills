@@ -3,15 +3,17 @@ name: puregram-rich
 description: >
   use when working with `@puregram/rich` in puregram v3 — a safe tagged-template
   emitter for telegram's rich messages (structured content with headings, lists,
-  code blocks, math formulas, spoilers, collapsible blocks, and more). covers the
-  `rich` namespace (`md` / `markdown` / `html` template tags), every implemented
-  inline builder (`bold` / `italic` / `underline` / `strikethrough` / `spoiler` /
+  code blocks, math formulas, spoilers, media, tables, and more). covers the
+  `rich` namespace (`md` / `markdown` / `html` template tags), every inline
+  builder (`bold` / `italic` / `underline` / `strikethrough` / `spoiler` /
   `code` / `marked` / `subscript` / `superscript` / `link` / `mentionUser` /
   `math` / `customEmoji` / `time` / `reference` / `anchor`), every block builder
   (`heading` / `paragraph` / `codeBlock` / `blockquote` / `divider` / `list` /
-  `orderedList` / `details` / `mathBlock`), composition helpers (`join` / `br`),
-  the `Rich` envelope with `.rtl()` / `.noEntityDetection()` / `.toInputRichMessage()`,
-  and the escaping rules that make string interpolation safe.
+  `orderedList` / `details` / `mathBlock` / `footer` / `pullQuote` / `taskList` /
+  `media` / `photo` / `video` / `audio` / `map` / `collage` / `slideshow` / `table`),
+  composition helpers (`join` / `br`), the `Rich` envelope with `.rtl()` /
+  `.noEntityDetection()` / `.toInputRichMessage()`, and the escaping rules that
+  make string interpolation safe.
 metadata:
   author: nitreojs
   source: https://github.com/puregram/puregram/tree/v3/packages/rich
@@ -143,8 +145,21 @@ all inline builders are under `rich.*`. content args accept `RichContent` (strin
 | `rich.orderedList` | `(items: RichContent[], options?: { start?: number })` | `1.` / `<ol start="…">` |
 | `rich.details` | `(summary: RichContent, body: RichContent, options?: { open?: boolean })` | `<details><summary>` (legal in both dialects) |
 | `rich.mathBlock` | `(latex: string)` | `$$…$$` / `<tg-math-block>` |
+| `rich.footer` | `(content: RichContent)` | `<footer>…</footer>` (both dialects) |
+| `rich.pullQuote` | `(content: RichContent, cite?: RichContent)` | `<aside>…<cite>cite</cite></aside>` (both dialects) |
+| `rich.taskList` | `(items: { text: RichContent, done?: boolean }[])` | md `- [ ]` / `- [x]`; html `<ul><li>☐/☑ …</li></ul>` |
+| `rich.media` | `(url: string, options?: { type?, caption?, spoiler? })` | http(s) url only. md `![](url)`; html `<img>`/`<video>`/`<audio>` (`<figure><figcaption>` when captioned) |
+| `rich.photo` | `(url: string, options?: { caption?, spoiler? })` | `media` with type fixed to `photo` |
+| `rich.video` | `(url: string, options?: { caption?, spoiler? })` | `media` with type fixed to `video` |
+| `rich.audio` | `(url: string, options?: { caption?, spoiler? })` | `media` with type fixed to `audio` |
+| `rich.map` | `(latitude: number, longitude: number, options?: { zoom?, caption? })` | `<tg-map lat long zoom/>` (both dialects; `<figure>` when captioned) |
+| `rich.collage` | `(items: readonly RichNode[], options?: { caption? })` | `<tg-collage>…media nodes…</tg-collage>` (both dialects) |
+| `rich.slideshow` | `(items: readonly RichNode[], options?: { caption? })` | `<tg-slideshow>…media nodes…</tg-slideshow>` (both dialects) |
+| `rich.table` | `(rows: RichContent[][], options?: { header?, align?, bordered?, striped?, caption? })` | md GFM table (first row = header); html `<table>` with `th`/`td`, `align`, `<caption>`, `bordered`/`striped` attrs |
 
 `codeBlock` and `mathBlock` do **not** escape the `code` / `latex` arg — those values are trusted raw content by design.
+
+media builders (`media`, `photo`, `video`, `audio`, `map`, `collage`, `slideshow`) accept **http(s) urls only** — `file_id` and upload-based embedding are not supported by the bot api rich-message format.
 
 ## composition helpers
 
@@ -230,7 +245,6 @@ await telegram.api.sendRichMessage({
 - no parsing of the literal template text (the server parses the final string)
 - no client-side validation of server limits
 - no entity tree for the input side (`TelegramRichText` / `TelegramPageBlock` are output-only — received inside `Message.rich_message`)
-- tables, media, `pullQuote`, `footer`, `taskList`, `map`, `collage`, `slideshow` are specified but not yet implemented — they'll be added incrementally
 
 ## exported surface
 
