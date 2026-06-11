@@ -129,6 +129,7 @@ all inline builders are under `rich.*`. content args accept `RichContent` (strin
 | `rich.time(label, unix, format?)` | `![label](tg://time?unix=…)` | `<tg-time unix="…">label</tg-time>` |
 | `rich.reference(text, name)` | `[text](#name)` | `<a href="#name">text</a>` |
 | `rich.anchor(name)` | `<a name="…"></a>` | `<a name="…"></a>` |
+| `rich.footnoteRef(id, label?)` | `[^id]` | `<a href="#id">label</a>` |
 
 `underline`, `subscript`, `superscript`, and `anchor` have no markdown token — they emit html even inside `rich.md` (rich-markdown accepts inline html).
 
@@ -156,6 +157,7 @@ all inline builders are under `rich.*`. content args accept `RichContent` (strin
 | `rich.collage` | `(items: readonly RichNode[], options?: { caption? })` | `<tg-collage>…media nodes…</tg-collage>` (both dialects) |
 | `rich.slideshow` | `(items: readonly RichNode[], options?: { caption? })` | `<tg-slideshow>…media nodes…</tg-slideshow>` (both dialects) |
 | `rich.table` | `(rows: RichContent[][], options?: { header?, align?, bordered?, striped?, caption? })` | md GFM table (first row = header); html `<table>` with `th`/`td`, `align`, `<caption>`, `bordered`/`striped` attrs |
+| `rich.footnote` | `(id: string, definition: RichContent)` | the definition behind a `footnoteRef(id)` marker. md `[^id]: …` / html `<tg-reference name="id">…</tg-reference>` |
 
 `codeBlock` and `mathBlock` do **not** escape the `code` / `latex` arg — those values are trusted raw content by design.
 
