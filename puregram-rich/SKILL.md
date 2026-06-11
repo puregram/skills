@@ -29,7 +29,7 @@ result is a `Rich` envelope. call `.toInputRichMessage()` to get the `TelegramIn
 - sending rich messages (headings, lists, code blocks, formulas, spoilers, collapsible blocks, …)
 - you want safe interpolation of user data into a rich-message template without hand-escaping
 - you're choosing between the `md` and `html` dialects and need to know which builders render how
-- you need to produce `TelegramInputRichMessage` for `tg.api.sendRichMessage`
+- you need to use `message.sendRich` / `message.replyWithRich` / `message.editRich` or pass a `Rich` to `tg.api.sendRichMessage`
 - you need right-to-left support or want to disable telegram's automatic entity detection on a message
 
 this skill does **not** cover plain-text entity formatting (`bold`, `italic`, `parse_mode`). for that see `puregram-markup`. for `tg.extend` / plugin mechanics see `using-puregram`.
@@ -39,21 +39,17 @@ this skill does **not** cover plain-text entity formatting (`bold`, `italic`, `p
 ```ts
 import { rich } from '@puregram/rich'
 
-const r = rich.md`
+// inside a message handler
+await message.sendRich(rich.md`
   # ${title}
 
   ${rich.bold('status:')} ${status}
 
   ${rich.list(items)}
-`
-
-await tg.api.sendRichMessage({
-  chat_id,
-  rich_message: r.toInputRichMessage()
-})
+`)
 ```
 
-`@puregram/rich` has no puregram peer dependency at this stage — it depends on `@puregram/api` for types only. tighter `tg`-level integration (so a `Rich` value can go into `tg.send(rich)` without the manual unwrap) is planned for a follow-up phase.
+`@puregram/rich` depends on `@puregram/api` for types. `Rich` implements `RichLike`, so it passes directly into any `rich_message` field without calling `.toInputRichMessage()` first.
 
 ## the `rich` namespace
 
@@ -193,12 +189,29 @@ r.rtl().noEntityDetection().toInputRichMessage()
 
 ## sending
 
+per-update shortcuts fill `chat_id` and `message_id` automatically:
+
+```ts
+// send a rich message in the same chat
+await message.sendRich(rich.md`# ${title}`)
+
+// reply to the incoming message
+await message.replyWithRich(rich.md`# ${title}`)
+
+// edit the bot's own message to rich content
+await message.editRich(rich.md`# updated ${status}`)
+```
+
+a `Rich` can also be passed directly to `tg.api.sendRichMessage` — `rich_message` accepts `TelegramInputRichMessage | RichLike` and `Rich` implements `RichLike`:
+
 ```ts
 await tg.api.sendRichMessage({
   chat_id,
-  rich_message: r.toInputRichMessage()
+  rich_message: rich.md`# ${title}`
 })
 ```
+
+`.toInputRichMessage()` is available as the low-level escape hatch when you need the raw shape.
 
 ## non-goals
 
