@@ -137,7 +137,7 @@ all inline builders are under `rich.*`. content args accept `RichContent` (strin
 
 | builder | signature | notes |
 |---|---|---|
-| `rich.heading` | `(level: 1\|2\|3\|4\|5\|6, content: RichContent)` | `#…######` / `<h1>…<h6>` |
+| `rich.heading` | `(level: 1\|2\|3\|4\|5\|6, content: RichContent)` | `#…######` / `<h1>…<h6>`. `rich.h1`…`rich.h6` are aliases |
 | `rich.paragraph` | `(content: RichContent)` | bare text in md / `<p>` in html |
 | `rich.codeBlock` | `(code: string, language?: string)` | fenced ` ``` ` / `<pre><code class="language-…">` |
 | `rich.blockquote` | `(content: RichContent)` | `>` prefix per line / `<blockquote>` |
