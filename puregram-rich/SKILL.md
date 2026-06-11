@@ -29,10 +29,10 @@ result is a `Rich` envelope. call `.toInputRichMessage()` to get the `TelegramIn
 - sending rich messages (headings, lists, code blocks, formulas, spoilers, collapsible blocks, …)
 - you want safe interpolation of user data into a rich-message template without hand-escaping
 - you're choosing between the `md` and `html` dialects and need to know which builders render how
-- you need to use `message.sendRich` / `message.replyWithRich` / `message.editRich` or pass a `Rich` to `tg.api.sendRichMessage`
+- you need to use `message.sendRich` / `message.replyWithRich` / `message.editRich` or pass a `Rich` to `telegram.api.sendRichMessage`
 - you need right-to-left support or want to disable telegram's automatic entity detection on a message
 
-this skill does **not** cover plain-text entity formatting (`bold`, `italic`, `parse_mode`). for that see `puregram-markup`. for `tg.extend` / plugin mechanics see `using-puregram`.
+this skill does **not** cover plain-text entity formatting (`bold`, `italic`, `parse_mode`). for that see `puregram-markup`. for `telegram.extend` / plugin mechanics see `using-puregram`.
 
 ## quick start
 
@@ -202,10 +202,10 @@ await message.replyWithRich(rich.md`# ${title}`)
 await message.editRich(rich.md`# updated ${status}`)
 ```
 
-a `Rich` can also be passed directly to `tg.api.sendRichMessage` — `rich_message` accepts `TelegramInputRichMessage | RichLike` and `Rich` implements `RichLike`:
+a `Rich` can also be passed directly to `telegram.api.sendRichMessage` — `rich_message` accepts `TelegramInputRichMessage | RichLike` and `Rich` implements `RichLike`:
 
 ```ts
-await tg.api.sendRichMessage({
+await telegram.api.sendRichMessage({
   chat_id,
   rich_message: rich.md`# ${title}`
 })
@@ -246,6 +246,6 @@ import type {
 
 ## see also
 
-- `using-puregram` — covers `tg.api.*`, the three-layer api, and plugin mechanics
+- `using-puregram` — covers `telegram.api.*`, the three-layer api, and plugin mechanics
 - `puregram-markup` — entity-based formatting for plain messages (no `parse_mode`)
 - package source: [`packages/rich/`](https://github.com/puregram/puregram/tree/v3/packages/rich)
