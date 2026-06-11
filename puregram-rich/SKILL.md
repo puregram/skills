@@ -32,6 +32,7 @@ result is a `Rich` envelope. call `.toInputRichMessage()` to get the `TelegramIn
 - you want safe interpolation of user data into a rich-message template without hand-escaping
 - you're choosing between the `md` and `html` dialects and need to know which builders render how
 - you need to use `message.sendRich` / `message.replyWithRich` / `message.editRich` or pass a `Rich` to `telegram.api.sendRichMessage`
+- you want rich content in an inline-query result via `InputMessageContent.rich(richObject)`
 - you need right-to-left support or want to disable telegram's automatic entity detection on a message
 
 this skill does **not** cover plain-text entity formatting (`bold`, `italic`, `parse_mode`). for that see `puregram-markup`. for `telegram.extend` / plugin mechanics see `using-puregram`.
@@ -243,6 +244,33 @@ await telegram.api.sendRichMessage({
 ```
 
 `.toInputRichMessage()` is available as the low-level escape hatch when you need the raw shape.
+
+### inline queries
+
+pass a `Rich` to `InputMessageContent.rich(richObject)` to use rich content as the body of an inline-query result:
+
+```ts
+import { rich } from '@puregram/rich'
+import { InlineQueryResult, InputMessageContent } from 'puregram'
+
+telegram.on('inline_query', async (query) => {
+  await query.answer({
+    results: [
+      InlineQueryResult.article({
+        id: '1',
+        title: 'rich result',
+        content: InputMessageContent.rich(rich.md`
+          # ${query.query}
+
+          what is **up**
+        `)
+      })
+    ]
+  })
+})
+```
+
+`InputMessageContent.rich(richObject)` is a callable — it calls `.toInputRichMessage()` on the `Rich` and wraps the result in `{ rich_message: … }`. the `.md` / `.markdown` / `.html` sub-forms build from a raw dialect string instead.
 
 ## non-goals
 
