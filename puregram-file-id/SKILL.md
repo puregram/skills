@@ -11,7 +11,7 @@ description: >
   api, `FileIdParseError` / `UnsupportedFileIdVersionError`, and the low-level
   rle + base64url + TL primitives.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/file-id
   package: "@puregram/file-id@3"
 ---

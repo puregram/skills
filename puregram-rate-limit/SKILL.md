@@ -10,7 +10,7 @@ description: >
   order (per-call > plugin > silent), custom `getStorageKey` for per-chat / per-thread
   scoping, and swap-in persistent `KVStorage<RateLimitEntry>` backends.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/rate-limit
   package: "@puregram/rate-limit@3"
 ---

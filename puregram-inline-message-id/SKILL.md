@@ -10,7 +10,7 @@ description: >
   (`parseInlineMessageId` / `serializeInlineMessageId` / type guards), and
   `InlineMessageIdParseError`.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/inline-message-id
   package: "@puregram/inline-message-id@3"
 ---

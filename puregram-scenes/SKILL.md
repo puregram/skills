@@ -9,7 +9,7 @@ description: >
   active-scene dispatch with `passthrough` for global `/cancel` / `/help`
   escapes. hard-depends on `@puregram/session`.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/scenes
   package: "@puregram/scenes@3"
 ---

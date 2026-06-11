@@ -8,7 +8,7 @@ description: >
   per-user / per-chat / per-thread state. peer-depends on `puregram@3` and
   `@puregram/storage`.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/session
   package: "@puregram/session@4"
 ---

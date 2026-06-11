@@ -12,7 +12,7 @@ description: >
   `maxEditBackoff` / `thinkingPlaceholder` pacing, `signal` aborts, the
   4096-char rollover, and the `StreamResult` return shape. private-chat-only.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/stream
   package: "@puregram/stream@3"
 ---

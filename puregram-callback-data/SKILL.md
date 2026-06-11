@@ -8,7 +8,7 @@ description: >
   with `present` / `missing` markers, `.and` / `.or` / `.not` composition, and
   the optional `callbackData([...])` plugin for global slug-collision detection.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/callback-data
   package: "@puregram/callback-data@3"
 ---

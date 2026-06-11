@@ -9,7 +9,7 @@ description: >
   restarts. two surfaces — `update.flow.*` auto-scoped inside handlers,
   `tg.flow.*` explicit chat/from outside.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/flow
   package: "@puregram/flow@3"
 ---

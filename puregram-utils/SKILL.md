@@ -10,7 +10,7 @@ description: >
   startAttach, attachInChat, game, share, videoChat) for typed
   `https://t.me/...` deep-links with validated inputs.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/utils
   package: "@puregram/utils@3"
 ---

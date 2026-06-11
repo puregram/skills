@@ -9,7 +9,7 @@ description: >
   `.storage` access, the auto-evict + retry path on stale `file_id` 400s, and
   the deduped re-upload behavior under concurrency.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/media-cacher
   package: "@puregram/media-cacher@3"
 ---

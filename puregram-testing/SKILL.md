@@ -9,7 +9,7 @@ description: >
   (`env.onApi` + `apiError(code, desc)`), strict modes, plugin packs, and
   `env.shutdown()`. assertion-library-agnostic.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/test
   package: "@puregram/test@3"
 ---

@@ -8,7 +8,7 @@ description: >
   custom redis / sqlite / cloudflare-kv / json-file adapters, and the official
   `@puregram/storage-redis` / `@puregram/storage-sqlite` packages.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/storage
   package: "@puregram/storage@3"
 ---

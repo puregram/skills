@@ -17,7 +17,7 @@ allowed-tools: >
   Bash(node *skills/using-puregram/tools/grep-source.mjs*),
   Bash(node *skills/using-puregram/tools/check-version.mjs*)
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram
   bot_api: "10.1"
   package: "puregram@3"

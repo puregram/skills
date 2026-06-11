@@ -15,7 +15,7 @@ description: >
   `.noEntityDetection()` / `.toInputRichMessage()`, and the escaping rules that
   make string interpolation safe.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/rich
   package: "@puregram/rich"
 ---

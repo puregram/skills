@@ -10,7 +10,7 @@ description: >
   `retryOnFloodWait` (proactive + reactive). distinct from `@puregram/rate-limit`
   which gates inbound updates.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/throttler
   package: "@puregram/throttler@3"
 ---

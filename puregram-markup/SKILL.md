@@ -10,7 +10,7 @@ description: >
   tags, the `Formatted` codec (`fromMessage` / `toHtml` / `toMarkdown`),
   `MarkupParseError`, and the chain rules telegram clients actually honor.
 metadata:
-  author: nitreojs
+  author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/markup
   package: "@puregram/markup@3"
 ---
