@@ -53,6 +53,7 @@ for deeper topics see the companion sibling skills:
 - `puregram-callback-data` — `@puregram/callback-data` (`defineCallbackData`, typed callback payloads, `.button`, `.filter`, `.with`)
 - `puregram-testing` — `@puregram/test` (actor-driven test framework for puregram bots)
 - `puregram-markup` — `@puregram/markup` (tagged-template entity-aware formatting; composes message entities, no `parse_mode` header needed)
+- `puregram-rich` — `@puregram/rich` (safe emitter for rich-message html/markdown; templates, block-array, builders, sendRich/editRich shortcuts)
 - `puregram-media-cacher` — `@puregram/media-cacher` (transparent `file_id` caching plugin, drop-in via `onBeforeRequest`)
 - `puregram-rate-limit` — `@puregram/rate-limit` (inbound per-user fixed-window rate limiting; distinct from outbound `@puregram/throttler`)
 - `puregram-file-id` — `@puregram/file-id` (parse / inspect / serialize telegram `file_id` and `file_unique_id` strings)

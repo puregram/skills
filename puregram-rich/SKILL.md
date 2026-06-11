@@ -73,6 +73,18 @@ calling a tag as a plain function skips escaping and dedent — the string is wr
 rich.md('# already formatted')
 ```
 
+the same tags accept a **block array** — pass an array of block nodes and they are joined with a blank line between each block. use this form when building structured content from data rather than writing prose inline:
+
+```ts
+rich.md([
+  rich.heading(1, title),
+  rich.list(items.map(i => rich.paragraph(i.text))),
+  rich.codeBlock(snippet, 'ts')
+])
+```
+
+use the template for prose; use the array form for composing top-level blocks from data.
+
 ### interpolation rules
 
 | interpolated value | what happens |
