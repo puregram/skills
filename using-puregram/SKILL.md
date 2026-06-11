@@ -396,7 +396,7 @@ import { ReplyParameters } from 'puregram'
 message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
 
-**bot api 10.1 additions** — `update.sendRich` (alias of `sendRichMessage`) and its `replyWithRich` twin send an `InputRichMessage` you build as a raw `{ html }` or `{ markdown }` string telegram parses server-side; ergonomic builders are coming in `@puregram/rich`. `sendDraft` / `sendRichDraft` alias the verbose `send*MessageDraft` methods. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject the request directly (chat + user auto-filled); the guard-bot query flow adds `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })`, both auto-filling the join-request query id.
+`update.sendRich` (alias `sendRichMessage`) and its `replyWithRich` twin send a rich message — you build an `InputRichMessage` as a raw `{ html }` or `{ markdown }` string telegram parses server-side (ergonomic builders live in `@puregram/rich`). `sendDraft` / `sendRichDraft` are the draft twins. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject directly (chat + user auto-filled), while `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })` drive the guard-bot query flow (query id auto-filled).
 
 ### `update.thread`
 
