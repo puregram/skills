@@ -163,6 +163,8 @@ all inline builders are under `rich.*`. content args accept `RichContent` (strin
 
 media builders (`media`, `photo`, `video`, `audio`, `map`, `collage`, `slideshow`) accept **http(s) urls only** — `file_id` and upload-based embedding are not supported by the bot api rich-message format.
 
+**aliases:** `h1`–`h6` (`heading`), `quote` (`blockquote`), `pre` (`codeBlock`), `hr` (`divider`), `strike` (`strikethrough`), `sub` / `sup` (`subscript` / `superscript`), `mention` (`mentionUser`), `emoji` (`customEmoji`), `fn` / `fnRef` (`footnote` / `footnoteRef`).
+
 ## composition helpers
 
 ### `rich.join(items, separator?)`
