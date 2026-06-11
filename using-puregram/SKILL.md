@@ -6,7 +6,7 @@ description: >
   `update.send`, `.extend(plugin)`, request hooks, dispatch middleware,
   `MediaSource`, keyboards, parse-mode, filters, `ApiError` / `suppress: true`,
   polling or webhook (express / fastify / koa / hono / h3 / elysia / web / raw
-  http). esm-only, node 22+, bot api 10.0.0. not for puregram v2.
+  http). esm-only, node 22+, bot api 10.1. not for puregram v2.
 allowed-tools: >
   Bash(node *skills/using-puregram/tools/get-method.mjs*),
   Bash(node *skills/using-puregram/tools/get-object.mjs*),
@@ -19,7 +19,7 @@ allowed-tools: >
 metadata:
   author: nitreojs
   source: https://github.com/puregram/puregram
-  bot_api: "10.0.0"
+  bot_api: "10.1"
   package: "puregram@3"
 ---
 
@@ -255,7 +255,7 @@ await tg.api.sendMediaGroup({
 
 document and audio groups must be uniform; photos and videos can mix freely.
 
-inline-query and inline-message factories: `InlineQueryResult.{article,photo,video,audio,voice,document,gif,mpeg4Gif,location,venue,contact,game}` plus `InlineQueryResult.cached.X`, and `InputMessageContent.{text,location,venue,contact,invoice}`.
+inline-query and inline-message factories: `InlineQueryResult.{article,photo,video,audio,voice,document,gif,mpeg4Gif,location,venue,contact,game}` plus `InlineQueryResult.cached.X`, and `InputMessageContent.{text,location,venue,contact,invoice}` plus `InputMessageContent.rich.{md,markdown,html}` — the rich variant takes a raw dialect string (`rich.md('# hi')` → `{ rich_message: { markdown: '# hi' } }`) that telegram parses server-side; pass an optional `{ isRtl?, skipEntityDetection? }` extras bag.
 
 **factory naming convention** (holds for every factory): required fields are positional, the optional extras bag is camelCase mirroring the bot-api field one-to-one (`parseMode`, `showAboveText`, `canSendMessages`, `allowSendingWithoutReply`, ...). two spots rename beyond plain camelCasing: `InlineQueryResult.*` flattens `input_message_content` → `content` and the `thumbnail_*` group → `thumbnail: { url, width?, height?, mimeType? }`; and `InputPollOption.text(text, { parseMode?, entities?, media? })` drops the bot-api `text_` prefix so its formatting extras read like `InputMessageContent.text`.
 
@@ -395,6 +395,8 @@ import { ReplyParameters } from 'puregram'
 
 message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
+
+**bot api 10.1 additions** — `update.sendRich` (alias of `sendRichMessage`) and its `replyWithRich` twin send an `InputRichMessage` you build as a raw `{ html }` or `{ markdown }` string telegram parses server-side; ergonomic builders are coming in `@puregram/rich`. `sendDraft` / `sendRichDraft` alias the verbose `send*MessageDraft` methods. on `chat_join_request` updates, `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })` auto-fill the join-request query id.
 
 ### `update.thread`
 
@@ -907,7 +909,7 @@ written in typescript, ships its own `.d.ts` — no `@types/puregram`. node 22+,
 
 - esm-only. no cjs build is shipped — `"type": "module"` in your `package.json` is required
 - node 22+, typescript 5.4+
-- one bot api version per puregram release (currently **bot api 10.0.0**). no multiplexing — upgrade puregram to upgrade the schema
+- one bot api version per puregram release (currently **bot api 10.1**). no multiplexing — upgrade puregram to upgrade the schema
 - plugins must namespace under `plugin.name`. top-level `tg` namespace pollution is rejected by the registry
 - `tg.api.X(...)` throws `ApiError` on failure. `tg.api.X({..., suppress: true})` returns `T | ApiResponseError`; use `Telegram.isErrorResponse(value)` as the type guard
 - `tg.api.call('method', params)` always throws (no `suppress` on the string escape hatch)
