@@ -10,7 +10,9 @@ description: >
   `fromEventEmitter`) plus duck-typed auto-detect, `parseMode: 'MarkdownV2' |
   'HTML'` integration with `@puregram/markup`, `editIntervalMs` /
   `maxEditBackoff` / `thinkingPlaceholder` pacing, `signal` aborts, the
-  4096-char rollover, and the `StreamResult` return shape. private-chat-only.
+  4096-char rollover, rich-message streaming via `rich` (`sendRichMessageDraft`
+  + `sendRichMessage`, 32768-char limit), and the `StreamResult` return shape.
+  private-chat-only.
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/stream
@@ -147,11 +149,29 @@ tg.onMessage((message) => {
 
 `@puregram/markup` is an optional peer dependency — it's only required when you actually use `parseMode`. if the strict re-parse fails on finalize (truly malformed output), the plugin falls back to raw text and calls `onError` instead of throwing.
 
+## rich-message streaming
+
+pass `rich` to stream into a telegram **rich message** (`sendRichMessageDraft` + `sendRichMessage`) instead of flat `parse_mode` text. rich markdown renders headings / lists / code blocks / tables / math, and the limit is 32768 (vs 4096) so rollovers are rarer
+
+```ts
+await message.stream(openAIStream, { rich: true })          // markdown (default)
+await message.stream(openAIStream, { rich: 'html' })        // telegram rich html
+await telegram.stream({ chat_id, source, rich: 'markdown' })
+```
+
+same engine — adapters, pacing, callbacks, abort, reply/thread forwarding all reused. only the wire calls and content field swap (`rich_message: { markdown }` / `{ html }`)
+
+- **private chats only** (drafts are private-only)
+- **`rich` and `parseMode` are mutually exclusive** — both set throws
+- **`link_preview_options` ignored** in rich mode (`sendRichMessage` has no such param)
+- `is_rtl` / `skip_entity_detection` are not exposed
+
 ## options
 
 | option | type | default | notes |
 |---|---|---|---|
 | `parseMode` | `'MarkdownV2' \| 'HTML'` | plain | lenient per-tick, strict on finalize. needs `@puregram/markup` |
+| `rich` | `boolean \| 'markdown' \| 'html'` | off | stream into a rich message — `true`=markdown, mutually exclusive with `parseMode` |
 | `editIntervalMs` | `number` | `250` | soft floor between `sendMessageDraft` calls — pieces yielded faster than this are coalesced |
 | `maxEditBackoff` | `number` | `4000` | drop a draft tick if local backoff exceeds this. the finalize `sendMessage` is never dropped |
 | `thinkingPlaceholder` | `boolean` | `true` | emit an empty draft eagerly on start so the user sees "typing…" immediately |
@@ -249,6 +269,7 @@ exported for advanced use (own pacing wrappers, draft-id collision tests):
 | `DRAFT_TTL_MS` | telegram's draft expiry | drafts older than this are gone server-side |
 | `DRAFT_SAFETY_MS` | safety margin under `DRAFT_TTL_MS` | local cutoff before finalize |
 | `MAX_CHUNK` | `4096` | telegram's message-length ceiling |
+| `MAX_RICH_CHUNK` | `32768` | rich-message length ceiling (rich-mode rollover) |
 | `DRAFT_ID_MAX` | rolling-counter ceiling | `draftIdOffset` wraps modulo this |
 | `DEFAULT_EDIT_INTERVAL_MS` | `250` | default for `editIntervalMs` |
 | `DEFAULT_MAX_EDIT_BACKOFF` | `4000` | default for `maxEditBackoff` |
@@ -262,7 +283,7 @@ import {
   normalize,                       // turn anything into an AsyncIterable<string>
   fromOpenAI, fromAnthropic, fromVercelAI, fromOllama,
   fromLangChain, fromTextStream, fromBytes, fromEventEmitter,
-  DRAFT_TTL_MS, DRAFT_SAFETY_MS, MAX_CHUNK, DRAFT_ID_MAX,
+  DRAFT_TTL_MS, DRAFT_SAFETY_MS, MAX_CHUNK, MAX_RICH_CHUNK, DRAFT_ID_MAX,
   DEFAULT_EDIT_INTERVAL_MS, DEFAULT_MAX_EDIT_BACKOFF
 } from '@puregram/stream'
 
@@ -273,7 +294,7 @@ import type {
   StreamSource,                    // discriminated union of accepted source shapes
   StreamResult,                    // return value of stream calls
   StreamApi, RunStreamOptions, StreamForwardOptions, StreamCallbacks,
-  ParseMode, ParsedPayload
+  ParseMode, ParsedPayload, RichDialect
 } from '@puregram/stream'
 ```
 
