@@ -305,5 +305,6 @@ import type {
 ## see also
 
 - `using-puregram` — covers `telegram.api.*`, the three-layer api, and plugin mechanics
+- `rich-message-authoring` — when an **LLM** writes the rich string: a system-prompt block constraining model output to this same grammar
 - `puregram-markup` — entity-based formatting for plain messages (no `parse_mode`)
 - package source: [`packages/rich/`](https://github.com/puregram/puregram/tree/v3/packages/rich)

@@ -20,6 +20,7 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 - [**puregram-testing**](./puregram-testing/SKILL.md) — actor-driven in-process test framework, vitest / mocha / node:test agnostic
 - [**puregram-markup**](./puregram-markup/SKILL.md) — tagged-template entity-aware formatter; composes message entities directly, no `parse_mode` header needed
 - [**puregram-rich**](./puregram-rich/SKILL.md) — safe emitter for rich-message html/markdown; templates + block-array authoring + builders, plus the sendRich/editRich shortcuts
+- [**rich-message-authoring**](./rich-message-authoring/SKILL.md) — a system-prompt block that constrains LLM output to telegram's supported rich grammar; for streaming or drafting rich content with a model
 - [**puregram-media-cacher**](./puregram-media-cacher/SKILL.md) — transparent `file_id` caching plugin; first send uploads, every later send reuses the cached id
 - [**puregram-rate-limit**](./puregram-rate-limit/SKILL.md) — inbound per-user fixed-window rate limiting; filter / middleware / imperative call shapes
 - [**puregram-file-id**](./puregram-file-id/SKILL.md) — TL parser for telegram `file_id` and `file_unique_id` strings; zero puregram deps
