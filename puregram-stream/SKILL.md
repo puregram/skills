@@ -179,7 +179,7 @@ same engine — adapters, pacing, callbacks, abort, reply/thread forwarding all 
 | `signal` | `AbortSignal` | — | aborts mid-stream, finalizes the last-good buffer, sets `result.aborted = true`, **no rethrow** |
 | `message_thread_id` | `number` | — | forwarded to telegram |
 | `reply_parameters` | `ReplyParameters` | — | forwarded |
-| `link_preview_options` | `LinkPreviewOptions` | — | forwarded |
+| `link_preview_options` | `LinkPreviewOptions` | — | forwarded; ignored in rich mode |
 | `disable_notification` | `boolean` | — | forwarded |
 | `protect_content` | `boolean` | — | forwarded |
 | `reply_markup` | `ReplyMarkup` | — | only attached to the terminal `sendMessage`, never to drafts |
