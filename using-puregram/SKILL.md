@@ -220,6 +220,7 @@ the full menu (see `README.md` for the table — every factory is one method on 
 - `url(url, { forceUpload? })` — remote url; telegram fetches it (or you do, with `forceUpload`)
 - `fileId(id)` — reuse a `file_id` you already have
 - `buffer(buf)`, `stream(readable)`, `file(undiciFile)`, `arrayBuffer(ab)`, `bytes(view)`, `base64(b64)`, `text(s)`, `json(value, { space? })`
+- `local(p)` — path the **local bot api server** reads off disk, no upload; requires `useLocal: true` (see [local bot api server](#local-bot-api-server))
 
 ### multi-item uploads
 
@@ -823,6 +824,24 @@ covered in [errors](#errors) above. these turn dispatch errors from "uncaughtExc
 ### polling concurrency + per-key sequentialization
 
 covered in [polling](#polling) above. `concurrency` + `sequentializeBy` give you real-world traffic shaping.
+
+## local bot api server
+
+the [official local bot api server](https://github.com/tdlib/telegram-bot-api) speaks the same bot api as the cloud, so it's a drop-in — set `apiBaseUrl` + `useLocal`:
+
+```ts
+const tg = new Telegram({
+  token: process.env.TOKEN!,
+  apiBaseUrl: 'http://localhost:8081/bot',
+  useLocal: true
+})
+```
+
+wins: 2 GB up/downloads (vs 50 MB / 20 MB), absolute on-disk `file_path`s, http webhooks on any port, no global rate limit. call `logOut` against the cloud once before moving a live bot over.
+
+`useLocal: true` makes `tg.download(...)` read files straight off disk (the server returns a local path, not a url). for uploads, `MediaSource.local(path)` hands the server a `file://` path to read itself, skipping the multipart upload — it throws without `useLocal`.
+
+`useLocal` and `MediaSource.local()` are orthogonal: `useLocal` is the endpoint protocol, `local()` is "this file is on a disk the server can read". they stay separate because the bot and server don't always share a filesystem (separate containers/hosts) — there `MediaSource.path(...)` still uploads the bytes.
 
 ## canonical recipe — photo with spoiler caption and a typed callback-data button
 
