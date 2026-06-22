@@ -8,7 +8,8 @@ description: >
   `parseCommand(text)` for `/command[@bot] [args...]` strings, and the
   `deepLink.*` builder namespace (start, startGroup, startChannel, startApp,
   startAttach, attachInChat, game, share, videoChat) for typed
-  `https://t.me/...` deep-links with validated inputs.
+  `https://t.me/...` deep-links with validated inputs, plus `parseDeepLink(url)`
+  parsing an inbound `t.me` link back into a typed descriptor.
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/utils
@@ -210,6 +211,23 @@ deepLink.videoChat({ username: 'mychannel', hash: 'abc123', live: true })
 - **phone** (for `attachInChat`) — digits only, no `+` prefix
 - **share url / text** — free-form; these *are* `encodeURIComponent`-escaped
 
+## `parseDeepLink(url)` — parse `t.me` links
+
+the inverse of `deepLink`: parse an inbound `t.me` link (with or without scheme, on `t.me` / `telegram.me` / `telegram.dog`) into a typed, discriminated descriptor. returns `undefined` for non-telegram, unparseable, or unmodeled links.
+
+```ts
+import { parseDeepLink } from '@puregram/utils'
+
+parseDeepLink('https://t.me/durov')         // { type: 'profile', username: 'durov' }
+parseDeepLink('t.me/durov/123')             // { type: 'message', chat: { username: 'durov' }, messageId: 123 }
+parseDeepLink('t.me/c/1380524958/187')      // { type: 'message', chat: { id: -1001380524958 }, messageId: 187 }
+parseDeepLink('t.me/my_bot?start=ref_42')   // { type: 'bot-start', bot: 'my_bot', payload: 'ref_42' }
+parseDeepLink('t.me/my_bot/app?startapp=x') // { type: 'mini-app', bot: 'my_bot', app: 'app', payload: 'x' }
+parseDeepLink('t.me/addstickers/Animals')   // { type: 'sticker-set', name: 'Animals' }
+```
+
+`type` discriminates the union: `profile`, `message`, `bot-start`, `group-start`, `channel-start`, `mini-app`, `attach`, `game`, `video-chat`, `share`, `sticker-set`, `emoji-set`, `invite`. private `c/<id>/<msg>` links resolve the bare channel id to its bot-api `-100…` form (same math as `toBotApiId`). note: `t.me/+<hash>` reads as a chat invite — a `+<phone>` profile link would be misread as one
+
 ## peer id conversion — bot api ↔ mtproto
 
 telegram clients, `t.me/c/…` links, and mtproto libs (mtcute, gramjs) use *bare*
@@ -250,6 +268,7 @@ import {
   WebApp,
   parseCommand,
   deepLink,
+  parseDeepLink,
   parsePeerId, toMtprotoId, toBotApiId,
   getPeerType, isUserId, isChatId, isChannelId,
   PeerIdError
@@ -260,6 +279,8 @@ import type {
   AttachChatTarget,
   AttachChooseTarget,
   ParsedCommand,
+  DeepLinkChat,            // { username } | { id }
+  ParsedDeepLink,          // discriminated by `type`
   ParsedPeerId,            // { type, id }
   PeerType,                // 'user' | 'chat' | 'channel'
   SlotMachineValue,        // readonly [CasinoValue, CasinoValue, CasinoValue]
