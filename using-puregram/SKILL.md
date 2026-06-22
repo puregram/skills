@@ -149,6 +149,18 @@ tg.onMessage((message) => {
 })
 ```
 
+### iterating paginated endpoints
+
+six paged bot-api methods have `iter*` helpers that auto-page — `for await` yields items one by one, `.collect()` drains the rest into an array carrying `.total`:
+
+```ts
+for await (const tx of tg.iterStarTransactions()) { console.log(tx.amount) }
+
+const photos = await tg.iterUserProfilePhotos(userId).collect()   // photos.length, photos.total
+```
+
+`iterUserProfilePhotos`, `iterUserProfileAudios`, `iterStarTransactions`, `iterUserGifts`, `iterChatGifts`, `iterBusinessAccountGifts` — each takes its `get*` options minus the offset (the iterator manages it), plus `{ limit }` to size pages.
+
 ### default request params
 
 set `defaultParams` once on the client to stop repeating params (most commonly `parse_mode`) at every call site. it merges into every outgoing call across all three layers. precedence is **call-site > per-method > `'*'`**; object-valued params replace wholesale (never deep-merged):
@@ -272,6 +284,7 @@ beyond the media/inline factories above, core ships these (same positional-requi
 - `InputSticker.{static,animated,video}(sticker, emojiList, extras?)` — sticker-set items; `sticker` is a `MediaSource`/`attach://` ref, `emojiList` positional
 - `InputPollOption.text(text, { parseMode?, entities?, media? })` — one `sendPoll` option; formatting plus the bot-api 10.0 `media` field
 - `LabeledPrice.of(label, amount)` and `ShippingOption.of(id, title, prices)` — invoice / shipping building blocks
+- `Invoice.{fiat,stars}(params)` — full `sendInvoice` / `createInvoiceLink` body. `stars` pins `currency: 'XTR'` + allows `subscriptionPeriod`; `fiat` requires `providerToken` + ISO 4217 `currency`. each rejects the other's exclusive fields at compile time. spread into `sendInvoice` (with `chat_id`) or pass straight to `createInvoiceLink`
 - `BotCommands.command(command, description)` plus `BotCommands.scope.{default,allPrivateChats,allGroupChats,allChatAdministrators,chat,chatAdministrators,chatMember}` for scoping `setMyCommands`
 - `MenuButton.{default,commands,webApp}` — chat menu button (`webApp(text, url)`)
 - `Reaction.{emoji,customEmoji,paid}` — reaction types for `setMessageReaction`
@@ -428,6 +441,12 @@ tg.onBusinessMessage(message => message.reply('on the connection'))   // + busin
 tg.onMessage(message => message.reply('regular'))                     // omitted (not a business msg)
 ```
 
+outside an update — or to bind a connection explicitly — `tg.business(connectionId)` returns a scoped `tg.api` that injects `business_connection_id` into every call (a call-site value still wins):
+
+```ts
+await tg.business(connectionId).sendMessage({ chat_id, text: 'on behalf of the account' })
+```
+
 every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
 
 use `node skills/using-puregram/tools/get-update.mjs <kind|ClassName>` to look up any wrapped update class — it prints all inherited getters/methods and shows the dispatcher name.
@@ -544,7 +563,7 @@ the five request-stage hooks, in order:
 
 1. **`onBeforeRequest`** — request just caught, params not yet serialized. mutate `params`, abort early
 2. **`onRequestIntercept`** — just before `fetch` fires. `url`, `init` are populated; swap the http client or rewrite the url here
-3. *(the actual api call happens here. no hook)*
+3. **`onApiCall`** — *around* hook wrapping the fetch: `(ctx, next) => { ... await next() ... }`. time / trace / retry / short-circuit a call. registered via `useHook('onApiCall', ...)`; runs only when registered, so no cost otherwise
 4. **`onResponseIntercept`** — response back, parsed as `json`. inspect or rewrite before puregram processes it
 5. **`onAfterRequest`** — pipeline done. cleanup time
 
@@ -706,7 +725,7 @@ key options:
 
 - `offset` — starting `update_id`, rarely needed
 - `timeout` — long-poll timeout in seconds
-- `allowedUpdates` — restrict the kinds of updates telegram delivers (use `UpdatesFilter.all()` for "literally every kind including opt-in ones like `chat_member`")
+- `allowedUpdates` — restrict the kinds telegram delivers (`UpdatesFilter.all()` for "every kind incl. opt-in ones like `chat_member`"; or `'auto'` to derive the minimal set from your registered handlers, falling back to telegram's default for opaque predicates)
 - `dropPendingUpdates` — `true` to drop the queued backlog, or a `string[]` to drop only specific kinds
 - `concurrency` — cap concurrent dispatches (default `Infinity`)
 - `maxInFlight` — backpressure; stop pulling new updates while this many dispatches are in flight (running + queued), resume as they settle (default `Infinity`). `concurrency` bounds what *runs*, `maxInFlight` bounds *running + queued* by pausing `getUpdates` — telegram holds the backlog server-side so memory stays flat under overload
@@ -798,7 +817,7 @@ await tg.deleteWebhook({ dropPendingUpdates: true })
 
 ## resilience
 
-three opt-in knobs for production traffic.
+a handful of opt-in knobs for production traffic.
 
 ### `retryOnFloodWait` — auto-retry on 429
 
@@ -813,9 +832,15 @@ const tg = new Telegram({
   token: process.env.TOKEN!,
   retryOnFloodWait: { max: 3, maxWaitMs: 10_000 }
 })
+
+// also retry 5xx + network errors with exponential backoff
+const tg = new Telegram({
+  token: process.env.TOKEN!,
+  retryOnFloodWait: { max: 3, on: ['flood', 'server', 'network'], backoff: { base: 3000 } }
+})
 ```
 
-only `429 with numeric retry_after` triggers a retry — every other error short-circuits. `suppress: true` calls keep their semantics (raw error object, no retry).
+defaults to `on: ['flood']` — only `429` with numeric `retry_after` retries. add `'server'` (api 5xx) / `'network'` (transport errors) to opt into exponential-`backoff` retries (`base × 2 ** attempt`, capped at `max`). `suppress: true` calls keep their semantics (raw error object, no retry).
 
 ### `tg.catch` + `swallowDispatchErrors`
 
@@ -824,6 +849,17 @@ covered in [errors](#errors) above. these turn dispatch errors from "uncaughtExc
 ### polling concurrency + per-key sequentialization
 
 covered in [polling](#polling) above. `concurrency` + `sequentializeBy` give you real-world traffic shaping.
+
+### auto-answering + de-duplicating updates
+
+two constructor knobs, both off by default:
+
+- `autoAnswerCallbackQuery` — answers a `callback_query` after dispatch if no handler called `update.answer(...)` (stops the client's loading spinner hanging). `true` for an empty answer, or `{ text, show_alert, ... }` for a default
+- `dedupeUpdates` — drops updates whose `update_id` was seen recently (webhook retries, overlapping `getUpdates`). `true` keeps the last 1000 ids; `{ max }` sizes the window
+
+```ts
+const tg = new Telegram({ token: process.env.TOKEN!, autoAnswerCallbackQuery: true, dedupeUpdates: true })
+```
 
 ## local bot api server
 

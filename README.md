@@ -8,7 +8,7 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 
 ### main entry
 
-- [**using-puregram**](./using-puregram/SKILL.md) — `Telegram.fromToken`, three-layer api (`tg.api.X` / `tg.send` / `update.send`), `.extend(plugin)`, request hooks, dispatch middleware, `MediaSource`, keyboards, parse-mode, filters, errors, polling vs webhook, `retryOnFloodWait`. start here.
+- [**using-puregram**](./using-puregram/SKILL.md) — `Telegram.fromToken`, three-layer api (`tg.api.X` / `tg.send` / `update.send`), `.extend(plugin)`, request hooks (incl. the `onApiCall` around-hook), dispatch middleware, `MediaSource`, keyboards, parse-mode, filters, errors, polling vs webhook, `retryOnFloodWait`, `Invoice` builders, pagination iterators, `tg.business`. start here.
 
 ### siblings
 
@@ -24,7 +24,7 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 - [**puregram-media-cacher**](./puregram-media-cacher/SKILL.md) — transparent `file_id` caching plugin; first send uploads, every later send reuses the cached id
 - [**puregram-rate-limit**](./puregram-rate-limit/SKILL.md) — inbound per-user fixed-window rate limiting; filter / middleware / imperative call shapes
 - [**puregram-file-id**](./puregram-file-id/SKILL.md) — TL parser for telegram `file_id` and `file_unique_id` strings; zero puregram deps
-- [**puregram-utils**](./puregram-utils/SKILL.md) — standalone helpers: slot-machine decoder, web app `initData` validation, `parseCommand`, typed `t.me` deep-link builders
+- [**puregram-utils**](./puregram-utils/SKILL.md) — standalone helpers: slot-machine decoder, web app `initData` validation, `parseCommand`, typed `t.me` deep-link builders + `parseDeepLink` parser
 - [**puregram-inline-message-id**](./puregram-inline-message-id/SKILL.md) — TL parser for telegram's `inline_message_id` blob; legacy + modern wire shapes
 - [**puregram-stream**](./puregram-stream/SKILL.md) — stream LLM output to telegram via animated `sendMessageDraft` previews; adapters for openai / anthropic / vercel ai / ollama / langchain
 - [**puregram-throttler**](./puregram-throttler/SKILL.md) — outbound rate-limit middleware; sliding-window buckets keep your bot under telegram's ~30 rps / per-chat / per-group soft limits
