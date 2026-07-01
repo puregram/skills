@@ -171,7 +171,7 @@ const tg = Telegram.fromToken(process.env.TOKEN!, {
     // applied wherever the param is valid
     '*': { parse_mode: 'HTML' },
     // per-method, typed to that method's params, overrides '*'
-    sendMessage: { link_preview_options: { is_disabled: true } }
+    sendMessage: { link_preview_options: LinkPreview.disabled() }
   }
 })
 
@@ -213,6 +213,35 @@ if (Telegram.isErrorResponse(result)) {
 ```
 
 **important**: `tg.api.call('method', params)` always throws — no `suppress` on the string escape hatch.
+
+## built-in classes — always use these, never hand-roll bot-api objects
+
+puregram ships a class or factory for **every** structured bot-api object. reach for it instead of writing the raw `{ ... }` shape by hand: the builders escape input, enforce field constraints, and stay correct across bot-api bumps — hand-written literals silently rot when telegram renames a field. the only place you pass a plain object is the raw escape hatch `tg.api.call('method', params)`, which has no generated type to build against.
+
+**rule of thumb:** about to type `reply_markup: { inline_keyboard: [...] }`, a raw button `{ text, callback_data }`, `reply_parameters: { ... }`, `link_preview_options: { ... }`, an `InputMedia` / inline-result dict, or a bare media string? stop — there's a class for it.
+
+| purpose | use | instead of hand-rolling |
+|---|---|---|
+| inline keyboard + buttons | `InlineKeyboard` / `InlineKeyboardBuilder` | `{ inline_keyboard: [[{ text, callback_data }]] }` |
+| reply keyboard + buttons | `Keyboard` / `KeyboardBuilder` | `{ keyboard: [[{ text }]] }` |
+| hide the reply keyboard | `RemoveKeyboard` (or `Keyboard.remove()`) | `{ remove_keyboard: true }` |
+| force a reply | `ForceReply` | `{ force_reply: true }` |
+| uploads (photo / doc / video / …) | `MediaSource.{path,url,fileId,buffer,stream,…}` | a bare path / url string |
+| media groups | `MediaGroup.{photos,videos,documents,audios}` · `InputMedia.{photo,video,…}` | `[{ type: 'photo', media }]` |
+| replies / quotes | `ReplyParameters.{to,cross,quote}` | `{ reply_parameters: { message_id } }` |
+| link previews | `LinkPreview.{disabled,url,large,small}` | `{ link_preview_options: { is_disabled } }` |
+| message reactions | `Reaction.{emoji,customEmoji,paid}` | `[{ type: 'emoji', emoji }]` |
+| inline-query answers | `InlineQueryResult.{article,photo,…}` + `.cached.X` | `[{ type: 'article', … }]` |
+| inline input content | `InputMessageContent.{text,location,venue,contact,invoice,rich}` | `{ message_text: … }` |
+| chat / admin permissions | `ChatPermissions.{allowAll,denyAll}` · `ChatAdministratorRights.{allowAll,denyAll}` | `{ can_send_messages, … }` |
+| sticker-set items | `InputSticker.{static,animated,video}` | `{ sticker, emoji_list }` |
+| poll options | `InputPollOption.text` | `{ text }` |
+| invoices / prices | `Invoice.{fiat,stars}` · `LabeledPrice.of` · `ShippingOption.of` | a raw invoice body |
+| bot commands + scopes | `BotCommands.command` + `BotCommands.scope.*` | `{ command, description }` |
+| chat menu button | `MenuButton.{default,commands,webApp}` | `{ type: 'web_app', … }` |
+| text formatting | `HTML` / `Markdown` / `MarkdownV2` (or `@puregram/markup`) | hand-escaped strings |
+
+each is detailed below (`MediaSource`, factories, keyboards, parse mode); run `node skills/using-puregram/tools/get-factory.mjs <Name>` for exact signatures.
 
 ## media (`MediaSource`)
 
@@ -291,7 +320,7 @@ beyond the media/inline factories above, core ships these (same positional-requi
 
 ## keyboards
 
-four kinds live in core: `Keyboard` (reply), `InlineKeyboard`, `RemoveKeyboard`, `ForceReply`. each has static-method builders for the common case plus a `*Builder` class for fluent chains:
+four kinds live in core: `Keyboard` (reply), `InlineKeyboard`, `RemoveKeyboard`, `ForceReply`. each has static-method builders for the common case plus a `*Builder` class for fluent chains. **never hand-write the raw `{ inline_keyboard: [...] }` / `{ keyboard: [...] }` shape — always go through these classes:**
 
 ```ts
 import { InlineKeyboard, Keyboard, RemoveKeyboard, ForceReply } from 'puregram'
@@ -314,9 +343,19 @@ const removed = new RemoveKeyboard()
 const forced = new ForceReply().setPlaceholder('your answer here')
 ```
 
-`InlineKeyboard.textButton({ text, payload })` is the common case for `callback_data`. other inline factories: `urlButton`, `payButton`, `loginButton`, `webAppButton`, `switchInlineQueryButton`, `switchInlineQueryCurrentChatButton`, `copyButton`, `gameButton`, plus reactive button styles (`primary`/`danger`/`success`) and `iconCustomEmojiId` on reply buttons.
+`InlineKeyboard.textButton({ text, payload })` is the common case for `callback_data`. other inline factories: `urlButton`, `webAppButton`, `copyButton`, `switchToChatButton`, `switchToCurrentChatButton`, `switchToChosenChatButton`, `loginButton`, `payButton`, `gameButton` — each with a short alias (`text`, `url`, `webApp`, `copy`, `switchToChat`, …) and an optional `style` (`ButtonStyle.Primary` / `.Danger` / `.Success`) + `iconCustomEmojiId`. reply-side `Keyboard` mirrors it: `textButton`, `requestUsersButton`, `requestChatButton`, `requestContactButton`, `requestLocationButton`, `requestPollButton`, `webAppButton`.
 
-for fluent chains use `InlineKeyboardBuilder` / `KeyboardBuilder` (`builder.row(button1, button2).button(button3).keyboard`).
+for fluent chains use `InlineKeyboardBuilder` / `KeyboardBuilder` — each `*Button(...)` appends to the current row, `.row()` commits it and opens the next, and the builder passes **straight** to `reply_markup` (it serializes to `{ inline_keyboard }` itself; `KeyboardBuilder` adds `.resize()` / `.oneTime()` / `.selective()`):
+
+```ts
+const kb = new InlineKeyboardBuilder()
+  .textButton({ text: 'yes', payload: 'yes' })
+  .textButton({ text: 'no', payload: 'no' })
+  .row()
+  .urlButton({ text: 'docs', url: 'https://core.telegram.org/bots/api' })
+
+await tg.send(100, 'pick one', { reply_markup: kb })
+```
 
 ## parse mode
 
@@ -884,7 +923,7 @@ wins: 2 GB up/downloads (vs 50 MB / 20 MB), absolute on-disk `file_path`s, http 
 end-to-end, using `@puregram/callback-data` for typed payloads:
 
 ```ts
-import { Telegram, MediaSource, HTML } from 'puregram'
+import { HTML, InlineKeyboard, MediaSource, Telegram } from 'puregram'
 import { defineCallbackData } from '@puregram/callback-data'
 
 const Press = defineCallbackData('press').string('source')
@@ -895,9 +934,7 @@ tg.onMessage(async (message) => {
   await message.sendPhoto(MediaSource.path('./cat.jpg'), {
     caption: HTML.spoiler('caption is a spoiler'),
     parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [[Press.button({ text: 'press me', source: 'cat-card' })]]
-    }
+    reply_markup: InlineKeyboard.keyboard([[Press.button({ text: 'press me', source: 'cat-card' })]])
   })
 })
 
@@ -913,7 +950,7 @@ four things to notice:
 
 1. `message.sendPhoto(photo, params?)` is the per-update shortcut — `chat_id` is auto-filled from `message.chat.id`, photo is positional, everything else goes in `params?`. `message.replyWithPhoto(photo, params?)` is the reply twin (same signature, auto-fills `reply_parameters`)
 2. `HTML.spoiler(text)` returns escaped HTML; pair with `parse_mode: 'HTML'`. for entity-aware formatting without a `parse_mode` header, use `@puregram/markup` (`format\`${spoiler('...')}\``)
-3. `Press.button({ text, ...payload })` builds an inline button with binary-packed `callback_data` (no JSON, no manual parsing). `reply_markup` accepts both the raw `{ inline_keyboard: [[...]] }` shape and `InlineKeyboard.keyboard([[...]])` — pick whichever's prettier at the call site
+3. `Press.button({ text, ...payload })` builds an inline button with binary-packed `callback_data` (no JSON, no manual parsing); drop it into `InlineKeyboard.keyboard([[...]])` — never hand-write the raw `{ inline_keyboard: [...] }` shape
 4. `Press.filter` is dispatch-ready — pass it to `tg.onCallbackQuery(...)` and the handler's `q.payload` is fully typed and validated
 
 without typed payloads, the no-plugin form is `InlineKeyboard.textButton({ text, payload: 'pressed' })` and `cb.data === 'pressed'` on the receiving side.

@@ -49,7 +49,7 @@ await tg.startPolling()
 idiomatic v3 — per-update `sendPhoto(photo, params?)` positional shortcut, `HTML.spoiler` for the caption, `@puregram/callback-data` for the button payload, `.filter` for dispatch:
 
 ```ts
-import { Telegram, MediaSource, HTML } from 'puregram'
+import { HTML, InlineKeyboard, MediaSource, Telegram } from 'puregram'
 import { defineCallbackData } from '@puregram/callback-data'
 
 const Press = defineCallbackData('press').string('source')
@@ -60,9 +60,7 @@ tg.onMessage(async (message) => {
   await message.sendPhoto(MediaSource.path('./cat.jpg'), {
     caption: HTML.spoiler('caption is a spoiler'),
     parse_mode: 'HTML',
-    reply_markup: {
-      inline_keyboard: [[Press.button({ text: 'press me', source: 'cat-card' })]]
-    }
+    reply_markup: InlineKeyboard.keyboard([[Press.button({ text: 'press me', source: 'cat-card' })]])
   })
 })
 

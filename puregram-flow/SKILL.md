@@ -162,9 +162,9 @@ wait for the next callback query whose data matches `predicate`. omit `predicate
 ```ts
 tg.command('confirm', async (message) => {
   await message.send('press the button', {
-    reply_markup: {
-      inline_keyboard: [[{ text: 'confirm', callback_data: 'confirm:yes' }]]
-    }
+    reply_markup: InlineKeyboard.keyboard([[
+      InlineKeyboard.textButton({ text: 'confirm', payload: 'confirm:yes' })
+    ]])
   })
 
   const tap = await message.flow.waitForCallbackQuery(
@@ -627,20 +627,18 @@ await tg.startPolling()
 ### 3. inline-button confirmation (`waitFor` on callback queries)
 
 ```ts
-import { Telegram } from 'puregram'
+import { InlineKeyboard, Telegram } from 'puregram'
 import { flow } from '@puregram/flow'
 
 const tg = Telegram.fromToken(process.env.BOT_TOKEN!).extend(flow())
 
 tg.command('poll', async (message) => {
   await message.send('rock, paper, or scissors?', {
-    reply_markup: {
-      inline_keyboard: [[
-        { text: 'rock', callback_data: 'rps:rock' },
-        { text: 'paper', callback_data: 'rps:paper' },
-        { text: 'scissors', callback_data: 'rps:scissors' }
-      ]]
-    }
+    reply_markup: InlineKeyboard.keyboard([[
+      InlineKeyboard.textButton({ text: 'rock', payload: 'rps:rock' }),
+      InlineKeyboard.textButton({ text: 'paper', payload: 'rps:paper' }),
+      InlineKeyboard.textButton({ text: 'scissors', payload: 'rps:scissors' })
+    ]])
   })
 
   const tap = await message.flow.waitFor('callback_query', {

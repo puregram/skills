@@ -33,7 +33,7 @@ if you also need typed callback payloads that survive bot restarts (state lives 
 ## quick start
 
 ```ts
-import { Telegram } from 'puregram'
+import { InlineKeyboard, Telegram } from 'puregram'
 import { defineCallbackData } from '@puregram/callback-data'
 
 const Ban = defineCallbackData('ban').number('user_id')
@@ -42,9 +42,7 @@ const tg = Telegram.fromToken(process.env.TOKEN!)
 
 tg.onMessage((m) => {
   return m.send('this user is sus', {
-    reply_markup: {
-      inline_keyboard: [[Ban.button({ text: 'ban', user_id: m.senderId! })]]
-    }
+    reply_markup: InlineKeyboard.keyboard([[Ban.button({ text: 'ban', user_id: m.senderId! })]])
   })
 })
 
