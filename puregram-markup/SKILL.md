@@ -145,6 +145,8 @@ textMention('dude', { id: 398859857, is_bot: false, first_name: 'dude' })
 customEmoji('😁', '5448765217123141')
 ```
 
+renders only for entitled bots — a fragment username, or a premium bot owner sending directly to private/group/supergroup chats. unentitled sends are not errors: the entity is silently stripped and the fallback char (`text`) shows. initial inline results ignore custom emoji; editing the inline message afterwards applies them. details: `using-puregram` → `reference/telegram-quirks.md`.
+
 ### `time(text, when, format?)` / `time(when, format?)`
 
 emits a `date_time` entity that telegram clients render in the recipient's locale + timezone:
