@@ -19,7 +19,7 @@ allowed-tools: >
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram
-  bot_api: "10.1"
+  bot_api: "10.2"
   package: "puregram@3"
 ---
 
@@ -1007,7 +1007,7 @@ written in typescript, ships its own `.d.ts` — no `@types/puregram`. node 22+,
 
 - esm-only. no cjs build is shipped — `"type": "module"` in your `package.json` is required
 - node 22+, typescript 5.4+
-- one bot api version per puregram release (currently **bot api 10.1**). no multiplexing — upgrade puregram to upgrade the schema
+- one bot api version per puregram release (currently **bot api 10.2**). no multiplexing — upgrade puregram to upgrade the schema
 - plugins must namespace under `plugin.name`. top-level `tg` namespace pollution is rejected by the registry
 - `tg.api.X(...)` throws `ApiError` on failure. `tg.api.X({..., suppress: true})` returns `T | ApiResponseError`; use `Telegram.isErrorResponse(value)` as the type guard
 - `tg.api.call('method', params)` always throws (no `suppress` on the string escape hatch)
