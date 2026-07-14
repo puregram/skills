@@ -1,19 +1,22 @@
 ---
 name: puregram-rich
 description: >
-  use when working with `@puregram/rich` in puregram v3 — a safe tagged-template
-  emitter for telegram's rich messages (structured content with headings, lists,
-  code blocks, math formulas, spoilers, media, tables, and more). covers the
-  `rich` namespace (`md` / `markdown` / `html` template tags), every inline
-  builder (`bold` / `italic` / `underline` / `strikethrough` / `spoiler` /
-  `code` / `marked` / `subscript` / `superscript` / `link` / `mentionUser` /
-  `math` / `customEmoji` / `time` / `reference` / `anchor`), every block builder
+  use when working with `@puregram/rich` in puregram v3 — the native-blocks
+  authoring layer for telegram's rich messages (bot api 10.2+). builders and
+  template tags emit `TelegramInputRichBlock[]` directly. covers the `rich`
+  namespace (callable composition, `md` / `markdown` / `html` parse tags with
+  `.lenient`, `raw.md` / `raw.html` passthrough), every inline builder (`bold` /
+  `italic` / `underline` / `strikethrough` / `spoiler` / `code` / `marked` /
+  `subscript` / `superscript` / `link` / `mentionUser` / `math` / `customEmoji` /
+  `time` / `reference` / `anchor` / `footnoteRef`), every block builder
   (`heading` / `paragraph` / `codeBlock` / `blockquote` / `divider` / `list` /
-  `orderedList` / `details` / `mathBlock` / `footer` / `pullQuote` / `taskList` /
-  `media` / `photo` / `video` / `audio` / `map` / `collage` / `slideshow` / `table`),
-  composition helpers (`join` / `br`), the `Rich` envelope with `.rtl()` /
-  `.noEntityDetection()` / `.toInputRichMessage()`, and the escaping rules that
-  make string interpolation safe.
+  `orderedList` / `taskList` / `details` / `mathBlock` / `footer` / `pullQuote` /
+  `media` / `photo` / `video` / `audio` / `animation` / `voiceNote` / `thinking` /
+  `map` / `collage` / `slideshow` / `table` / `footnote`), MediaSource uploads in
+  media builders, the `Rich` envelope (`.blocks` / `.rtl()` /
+  `.noEntityDetection()` / `.toMarkdown()` / `.toHtml()` /
+  `.toInputRichMessage()`), strict vs lenient parsing, and interpolation
+  splicing semantics.
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/rich
@@ -22,27 +25,26 @@ metadata:
 
 # `@puregram/rich`
 
-safe emitter for telegram's rich messages. telegram accepts a single raw html or markdown string; `@puregram/rich` makes authoring ergonomic and injection-proof: template literal text passes through raw (the server parses it), while interpolated `${…}` values are automatically escaped (strings) or rendered (builder nodes).
+native-blocks authoring for telegram's rich messages. builders and template tags emit the `blocks` wire format (`TelegramInputRichBlock[]`) directly — telegram renders exactly what you compose, no server-side string parsing involved. interpolation is safe by construction: `${…}` values are spliced into the block tree as values, never concatenated into a source string.
 
-result is a `Rich` envelope. call `.toInputRichMessage()` to get the `TelegramInputRichMessage` shape.
+result is a `Rich` envelope. it implements `RichLike`, so it passes directly into any `rich_message` field.
 
 ## when to use this skill
 
-- sending rich messages (headings, lists, code blocks, formulas, spoilers, collapsible blocks, …)
-- you want safe interpolation of user data into a rich-message template without hand-escaping
-- you're choosing between the `md` and `html` dialects and need to know which builders render how
-- you need to use `message.sendRich` / `message.replyWithRich` / `message.editRich` or pass a `Rich` to `telegram.api.sendRichMessage`
-- you want rich content in an inline-query result via `InputMessageContent.rich(richObject)`
-- you need right-to-left support or want to disable telegram's automatic entity detection on a message
+- sending rich messages (headings, lists, code blocks, tables, formulas, media, collapsible blocks, …)
+- you want safe interpolation of user data without hand-escaping
+- you need `message.sendRich` / `message.replyWithRich` / `message.editRich` or `telegram.api.sendRichMessage`
+- you have a pre-authored markdown/html string (e.g. LLM output) and need to choose between parsing it (`rich.md(str)`) and passing it through raw (`rich.raw.md(str)`)
+- you want uploaded media (`MediaSource.path` / `.buffer`) inside a rich message
+- rich content in an inline-query result via `InputMessageContent.rich(richObject)`
 
-this skill does **not** cover plain-text entity formatting (`bold`, `italic`, `parse_mode`). for that see `puregram-markup`. for `telegram.extend` / plugin mechanics see `using-puregram`.
+not covered here: plain-text entity formatting (see `puregram-markup`), streaming drafts (see `puregram-stream`), the LLM grammar prompt (see `rich-message-authoring`).
 
 ## quick start
 
 ```ts
 import { rich } from '@puregram/rich'
 
-// inside a message handler
 await message.sendRich(rich.md`
   # ${title}
 
@@ -52,259 +54,179 @@ await message.sendRich(rich.md`
 `)
 ```
 
-`@puregram/rich` depends on `@puregram/api` for types. `Rich` implements `RichLike`, so it passes directly into any `rich_message` field without calling `.toInputRichMessage()` first.
-
 ## the `rich` namespace
 
-everything lives under one named import:
-
 ```ts
-import { rich } from '@puregram/rich'
+rich(content)      // compose builders/content into a blocks envelope
+rich`…`            // compose template — NO parsing: literal text stays literal, values splice,
+                   // blank lines separate paragraphs, dedent applies (markup's `format` analogue)
+rich.md`…`         // parse rich-markdown → blocks (rich.markdown is an alias)
+rich.html`…`       // parse rich-html → blocks
+rich.raw.md(str)   // raw dialect passthrough — no parsing (also raw.markdown / raw.html)
+rich.*             // every builder (rich.bold, rich.heading, …)
 ```
 
-### template tags
+### parse tags
+
+each tag accepts three call forms and has a `.lenient` variant:
 
 ```ts
-rich.md`…`        // markdown dialect → Rich { dialect: 'markdown', content: '…' }
-rich.markdown`…`  // alias of rich.md
-rich.html`…`      // html dialect → Rich { dialect: 'html', content: '…' }
+rich.md`# ${title}`               // tagged template — parses, splices ${…} safely
+rich.md('# from a string')        // string call — parses the string
+rich.md([rich.h1('from data')])   // builder array — emits directly, no parsing
+rich.md.lenient(llmOutput)        // permissive — unsupported constructs become literal text
 ```
 
-calling a tag as a plain function skips escaping and dedent — the string is wrapped as-is:
+- strict parses throw `RichParseError` (with `.position` and `.source`) on unsupported/malformed constructs; `.lenient` degrades them to literal text
+- markdown templates are **dedented** (common leading indentation stripped); html templates are not
+- the accepted grammar is the rich dialect telegram itself parses (see `rich-message-authoring` for the full list): headings, fenced code (` ```lang ` / ` ```math `), `$…$` / `$$…$$` math, dividers, quotes, bullet / ordered / task lists, gfm tables, footnotes, lone `![](url)` media lines, all inline tokens, embedded supported html tags, backslash escapes, numeric + the 13 named entities
+- parse input is bounded by `MAX_RICH_PARSE_LENGTH` (4 × telegram's 32768-char message cap); nesting by `MAX_NESTING_DEPTH` (128)
 
-```ts
-rich.md('# already formatted')
-```
-
-the same tags accept a **block array** — pass an array of block nodes and they are joined with a blank line between each block. use this form when building structured content from data rather than writing prose inline:
-
-```ts
-rich.md([
-  rich.heading(1, title),
-  rich.list(items.map(i => rich.paragraph(i.text))),
-  rich.codeBlock(snippet, 'ts')
-])
-```
-
-use the template for prose; use the array form for composing top-level blocks from data.
-
-### interpolation rules
+### interpolation splicing
 
 | interpolated value | what happens |
 |---|---|
-| `string` | dialect-escaped → cannot inject formatting |
-| `number` | stringified, then escaped |
-| builder node (`RichNode`) | rendered to the template's dialect |
-| `Rich` | inlined as-is; mismatch with template dialect throws `RichError` |
-| `RichContent[]` | each item rendered and concatenated |
-| `null` / `undefined` / `false` | empty string |
+| `string` | spliced as literal text — never parsed as syntax |
+| `number` | stringified |
+| inline builder | spliced into the surrounding text |
+| block builder | spliced as its own block(s); paragraph prose splits around it; throws inside headings/cells |
+| blocks `Rich` fragment | spliced at block level |
+| array | each item spliced in order |
+| `null` / `undefined` / `false` | nothing |
 
-template strings are **dedented** — the common leading indentation shared by all literal lines is stripped, so multi-line authoring reads naturally at any indent level.
+interpolation also works inside urls, anchor names, emoji ids, code-fence language tags, and code/math bodies (plain text only there).
 
-**escape sets:**
+### raw passthrough
 
-- markdown: backslash-escapes `` \ ` * _ ~ = | [ ] ( ) # ! + - ``; `& < >` become numeric entities (telegram renders `\<` literally, but accepts entities)
-- html: `& < > "` → numeric entities (`&#38;` etc.)
+```ts
+rich.raw.md(markdown)                    // → { markdown }
+rich.raw.html(html, { media })           // → { html, media } — entries for tg://…?id= links
+```
 
-because strings are always escaped, `${userInput}` is safe in both dialects.
+use for pre-authored strings that are already in the grammar (LLM output being the main case — the server parses them). raw envelopes expose no `.blocks` and cannot be spliced into templates or compositions.
 
 ## inline builders
 
-all inline builders are under `rich.*`. content args accept `RichContent` (string / number / node / Rich / array / falsy).
+all emit native `RichText` entities. content args accept `RichContent`.
 
-| builder | markdown | html |
-|---|---|---|
-| `rich.bold(x)` | `**x**` | `<b>x</b>` |
-| `rich.italic(x)` | `*x*` | `<i>x</i>` |
-| `rich.underline(x)` | `<u>x</u>` | `<u>x</u>` |
-| `rich.strikethrough(x)` | `~~x~~` | `<s>x</s>` |
-| `rich.spoiler(x)` | `\|\|x\|\|` | `<tg-spoiler>x</tg-spoiler>` |
-| `rich.code(x)` | `` `x` `` | `<code>x</code>` |
-| `rich.marked(x)` | `==x==` | `<mark>x</mark>` |
-| `rich.subscript(x)` | `<sub>x</sub>` | `<sub>x</sub>` |
-| `rich.superscript(x)` | `<sup>x</sup>` | `<sup>x</sup>` |
-| `rich.link(text, url)` | `[text](url)` | `<a href="url">text</a>` |
-| `rich.mentionUser(text, userId)` | `[text](tg://user?id=…)` | `<a href="tg://user?id=…">text</a>` |
-| `rich.math(latex)` | `$latex$` | `<tg-math>latex</tg-math>` |
-| `rich.customEmoji(id, alt)` | `![alt](tg://emoji?id=…)` | `<tg-emoji emoji-id="…">alt</tg-emoji>` |
-| `rich.time(label, unix, format?)` | `![label](tg://time?unix=…)` | `<tg-time unix="…">label</tg-time>` |
-| `rich.reference(text, name)` | `[text](#name)` | `<a href="#name">text</a>` |
-| `rich.anchor(name)` | `<a name="…"></a>` | `<a name="…"></a>` |
-| `rich.footnoteRef(id, label?)` | `[^id]` | `<a href="#id">label</a>` |
+| builder | emits |
+|---|---|
+| `bold` / `italic` / `underline` / `strikethrough` / `spoiler` / `code` / `marked` / `subscript` / `superscript` | `{ type, text }` |
+| `link(text, url)` | `url` |
+| `mentionUser(text, userId, options?)` | `text_mention` with a real user object; `options`: `firstName` / `lastName` / `username` / `isBot` |
+| `math(latex)` | `mathematical_expression` |
+| `customEmoji(id, alt)` | `custom_emoji` |
+| `time(label, unix, format?)` | `date_time` |
+| `reference(text, name)` | `anchor_link` |
+| `anchor(name)` | `anchor` |
+| `footnoteRef(id, label?)` | `reference_link` |
 
-`underline`, `subscript`, `superscript`, and `anchor` have no markdown token — they emit html even inside `rich.md` (rich-markdown accepts inline html).
+**aliases:** `strike`, `sub`, `sup`, `mention`, `emoji`, `fnRef`.
 
 ## block builders
 
-| builder | signature | notes |
-|---|---|---|
-| `rich.heading` | `(level: 1\|2\|3\|4\|5\|6, content: RichContent)` | `#…######` / `<h1>…<h6>`. `rich.h1`…`rich.h6` are aliases |
-| `rich.paragraph` | `(content: RichContent)` | bare text in md / `<p>` in html |
-| `rich.codeBlock` | `(code: string, language?: string)` | fenced ` ``` ` / `<pre><code class="language-…">` |
-| `rich.blockquote` | `(content: RichContent)` | `>` prefix per line / `<blockquote>` |
-| `rich.divider` | `()` | `---` / `<hr/>` |
-| `rich.list` | `(items: RichContent[])` | `- ` / `<ul>` |
-| `rich.orderedList` | `(items: RichContent[], options?: { start?: number })` | `1.` / `<ol start="…">` |
-| `rich.details` | `(summary: RichContent, body: RichContent, options?: { open?: boolean })` | `<details><summary>` (legal in both dialects) |
-| `rich.mathBlock` | `(latex: string)` | `$$…$$` / `<tg-math-block>` |
-| `rich.footer` | `(content: RichContent)` | `<footer>…</footer>` (both dialects) |
-| `rich.pullQuote` | `(content: RichContent, cite?: RichContent)` | `<aside>…<cite>cite</cite></aside>` (both dialects) |
-| `rich.taskList` | `(items: { text: RichContent, done?: boolean }[])` | md `- [ ]` / `- [x]`; html `<ul><li>☐/☑ …</li></ul>` |
-| `rich.media` | `(url: string, options?: { type?, caption?, spoiler? })` | http(s) url only. md `![](url)`; html `<img>`/`<video>`/`<audio>` (`<figure><figcaption>` when captioned) |
-| `rich.photo` | `(url: string, options?: { caption?, spoiler? })` | `media` with type fixed to `photo` |
-| `rich.video` | `(url: string, options?: { caption?, spoiler? })` | `media` with type fixed to `video` |
-| `rich.audio` | `(url: string, options?: { caption?, spoiler? })` | `media` with type fixed to `audio` |
-| `rich.map` | `(latitude: number, longitude: number, options?: { zoom?, caption? })` | `<tg-map lat long zoom/>` (both dialects; `<figure>` when captioned) |
-| `rich.collage` | `(items: readonly RichNode[], options?: { caption? })` | `<tg-collage>…media nodes…</tg-collage>` (both dialects) |
-| `rich.slideshow` | `(items: readonly RichNode[], options?: { caption? })` | `<tg-slideshow>…media nodes…</tg-slideshow>` (both dialects) |
-| `rich.table` | `(rows: RichContent[][], options?: { header?, align?, bordered?, striped?, caption? })` | md GFM table (first row = header); html `<table>` with `th`/`td`, `align`, `<caption>`, `bordered`/`striped` attrs |
-| `rich.footnote` | `(id: string, definition: RichContent)` | the definition behind a `footnoteRef(id)` marker. md `[^id]: …` / html `<tg-reference name="id">…</tg-reference>` |
+| builder | signature / notes |
+|---|---|
+| `heading` | `(level: 1-6, content)` → `{ type: 'heading', size }`; `h1`–`h6` aliases |
+| `paragraph` | `(content)` |
+| `codeBlock` | `(code, language?)` → `pre` (code is raw, untouched) |
+| `blockquote` | `(content, credit?)` |
+| `divider` | `()` |
+| `list` | `(items)` |
+| `orderedList` | `(items, { start?, type? })` — `type`: `'a' \| 'A' \| 'i' \| 'I' \| '1'` label style |
+| `taskList` | `({ text, done? }[])` — checkbox items |
+| `details` | `(summary, body, { open? })` |
+| `mathBlock` | `(latex)` (raw) |
+| `footer` | `(content)` |
+| `pullQuote` | `(content, cite?)` |
+| `thinking` | `(content)` — **`sendRichMessageDraft` only**, can't appear in a sent message |
+| `media` | `(src, { type?, caption?, credit?, spoiler? })` — kind inferred from url extension, `photo` for envelopes |
+| `photo` / `video` / `audio` / `animation` / `voiceNote` | `(src, options)` — kind fixed; `spoiler` applies to photo/video/animation only |
+| `map` | `(lat, long, { zoom?, width?, height?, caption?, credit? })` — defaults zoom 15, 900×450 |
+| `collage` / `slideshow` | `(mediaNodes, { caption?, credit? })` |
+| `table` | `(rows, { header?, align?, bordered?, striped?, caption? })` — first row is the header unless `header: false` |
+| `footnote` | `(id, definition)` — pairs with `footnoteRef(id)` |
 
-`codeBlock` and `mathBlock` do **not** escape the `code` / `latex` arg — those values are trusted raw content by design.
+**aliases:** `quote`, `pre`, `hr`, `fn`. composition helpers: `join(items, separator?)`, `br()`.
 
-media builders (`media`, `photo`, `video`, `audio`, `map`, `collage`, `slideshow`) accept **http(s) urls only** — `file_id` and upload-based embedding are not supported by the bot api rich-message format.
+`caption` + `credit` build a `RichBlockCaption`; a `credit` without a `caption` throws.
 
-**aliases:** `h1`–`h6` (`heading`), `quote` (`blockquote`), `pre` (`codeBlock`), `hr` (`divider`), `strike` (`strikethrough`), `sub` / `sup` (`subscript` / `superscript`), `mention` (`mentionUser`), `emoji` (`customEmoji`), `fn` / `fnRef` (`footnote` / `footnoteRef`).
+### media sources
 
-## composition helpers
-
-### `rich.join(items, separator?)`
+media builders accept an http(s) url string **or** any puregram `MediaSource.*` envelope:
 
 ```ts
-rich.join(items: RichContent[], separator?: string | RichNode): RichNode
+import { MediaSource } from 'puregram'
+
+rich([
+  rich.photo(MediaSource.path('./chart.png'), { caption: 'q3' }),
+  rich.voiceNote(MediaSource.buffer(voice))
+])
 ```
 
-joins items with a separator. when any item is a block node, separator is replaced with `\n`; otherwise items concat with the given separator (default `''`). level of the returned node is `block` if any item is a block, `inline` otherwise.
-
-```ts
-rich.md`tags: ${rich.join(tags.map(t => rich.code(t)), ', ')}`
-```
-
-### `rich.br()`
-
-line break — `<br>` in html, `\n` in markdown. useful inside `blockquote` or joined inline runs:
-
-```ts
-rich.html`${rich.blockquote([
-  'first line',
-  rich.br(),
-  rich.italic('second line')
-])}`
-```
+envelopes pass through the emitted blocks untouched; puregram core resolves them at send time (upload via `attach://`, file_id/url substituted inline). this works for `blocks[].…` media and `InputRichMessage.media[]` entries alike — serialization to a dialect string (`toMarkdown()`) throws for envelope media.
 
 ## the `Rich` envelope
 
 ```ts
 class Rich {
-  readonly dialect: 'markdown' | 'html'
-  readonly content: string
+  readonly dialect: 'blocks' | 'markdown' | 'html'
+  readonly content: TelegramInputRichBlock[] | string
+  readonly media?: TelegramInputRichMessageMedia[]
+
+  get blocks(): TelegramInputRichBlock[] | undefined  // undefined for raw envelopes
 
   rtl(value?: boolean): this
   noEntityDetection(value?: boolean): this
 
+  toMarkdown(): string   // blocks → rich-markdown serializer (raw md returns content as-is)
+  toHtml(): string       // blocks → rich-html serializer
   toInputRichMessage(): TelegramInputRichMessage
-  // → { markdown?: string } | { html?: string } (+ is_rtl?, skip_entity_detection?)
-
   toJSON(): TelegramInputRichMessage
 }
 ```
 
-```ts
-const r = rich.md`# ${heading}`
-
-r.toInputRichMessage()
-// → { markdown: '# My heading' }
-
-r.rtl().noEntityDetection().toInputRichMessage()
-// → { markdown: '# My heading', is_rtl: true, skip_entity_detection: true }
-```
+`toInputRichMessage()` → `{ blocks }` or `{ [dialect]: content, media? }`, plus `is_rtl` / `skip_entity_detection` when set.
 
 ## sending
 
-per-update shortcuts fill `chat_id` and `message_id` automatically:
-
 ```ts
-// send a rich message in the same chat
 await message.sendRich(rich.md`# ${title}`)
-
-// reply to the incoming message
 await message.replyWithRich(rich.md`# ${title}`)
-
-// edit the bot's own message to rich content
 await message.editRich(rich.md`# updated ${status}`)
+
+await telegram.api.sendRichMessage({ chat_id, rich_message: rich.md`# ${title}` })
 ```
 
-a `Rich` can also be passed directly to `telegram.api.sendRichMessage` — `rich_message` accepts `TelegramInputRichMessage | RichLike` and `Rich` implements `RichLike`:
+inline queries: `InputMessageContent.rich(richObject)` wraps the envelope for an inline-query result body.
 
-```ts
-await telegram.api.sendRichMessage({
-  chat_id,
-  rich_message: rich.md`# ${title}`
-})
-```
+## errors
 
-`.toInputRichMessage()` is available as the low-level escape hatch when you need the raw shape.
-
-### inline queries
-
-pass a `Rich` to `InputMessageContent.rich(richObject)` to use rich content as the body of an inline-query result:
-
-```ts
-import { rich } from '@puregram/rich'
-import { InlineQueryResult, InputMessageContent } from 'puregram'
-
-telegram.on('inline_query', async (query) => {
-  await query.answer({
-    results: [
-      InlineQueryResult.article({
-        id: '1',
-        title: 'rich result',
-        content: InputMessageContent.rich(rich.md`
-          # ${query.query}
-
-          what is **up**
-        `)
-      })
-    ]
-  })
-})
-```
-
-`InputMessageContent.rich(richObject)` is a callable — it calls `.toInputRichMessage()` on the `Rich` and wraps the result in `{ rich_message: … }`. the `.md` / `.markdown` / `.html` sub-forms build from a raw dialect string instead.
-
-## non-goals
-
-- no parsing of the literal template text (the server parses the final string)
-- no client-side validation of server limits
-- no entity tree for the input side (`TelegramRichText` / `TelegramPageBlock` are output-only — received inside `Message.rich_message`)
+- `RichError` — misuse: raw envelope composed into blocks, dialect-mismatched serialization, block builder in inline content, credit without caption, envelope media serialized to a string, parse input over the length bound
+- `RichParseError extends RichError` — grammar violations in strict parses; carries `.position` and `.source`
 
 ## exported surface
 
 ```ts
 import {
-  rich,         // the authoring namespace (md / markdown / html + all builders)
-  Rich,         // the Rich envelope class
-  RichError,    // thrown on dialect-mismatch interpolation
-  makeNode,     // low-level: construct a RichNode directly
-  isRichNode    // type guard
+  rich, Rich, RichError, RichParseError,
+  makeNode, isRichNode,          // custom nodes: makeNode(level, emit)
+  emitText, emitBlocks,          // RichContent → RichText / InputRichBlock[]
+  parseMarkdown, parseHtml,      // string → InputRichBlock[]
+  serializeBlocks                // InputRichBlock[] → dialect string
 } from '@puregram/rich'
 
 import type {
-  RichContent,  // string | number | RichNode | Rich | null | undefined | false | RichContent[]
-  RichNode,     // { level: 'inline' | 'block'; render(dialect: Dialect): string }
-  Dialect       // 'markdown' | 'html'
+  RichContent, RichNode, RichEmit, Dialect,
+  RichMediaSource, RichMediaInput, RichMediaKind,
+  RichParseTag, RawOptions
 } from '@puregram/rich'
 ```
 
-## errors
-
-`RichError` is thrown when:
-- a `Rich` value with the wrong dialect is interpolated into a template (e.g. an `html` envelope inside `rich.md\`\``)
-- unsupported content type is passed as `RichContent`
-
 ## see also
 
-- `using-puregram` — covers `telegram.api.*`, the three-layer api, and plugin mechanics
-- `rich-message-authoring` — when an **LLM** writes the rich string: a system-prompt block constraining model output to this same grammar
-- `puregram-markup` — entity-based formatting for plain messages (no `parse_mode`)
+- `using-puregram` — `telegram.api.*`, the three-layer api, plugin mechanics
+- `rich-message-authoring` — when an **LLM** writes the dialect string for `rich.raw.*`
+- `puregram-stream` — streaming drafts (`sendRichMessageDraft`)
+- `puregram-markup` — entity-based formatting for plain messages
 - package source: [`packages/rich/`](https://github.com/puregram/puregram/tree/v3/packages/rich)
