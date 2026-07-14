@@ -168,14 +168,14 @@ models default to web html. a few contrastive pairs teach the constraint faster 
 
 ## wiring it into a send
 
-prepend the block to your model call, then hand the model's raw markdown to a rich message. the **call form** of `rich.md(...)` passes a string through unchanged (no escaping, no dedent) — exactly right for output that's already in the grammar:
+prepend the block to your model call, then hand the model's raw markdown to a rich message. `rich.raw.md(...)` passes the string through unchanged — exactly right for output that's already in the grammar (`rich.md(...)` would parse it client-side into native blocks and throw `RichParseError` on anything outside the grammar; `rich.md.lenient(...)` parses but degrades unknown constructs to literal text):
 
 ```ts
 import { rich } from '@puregram/rich'
 
 const markdown = await runModel(richSystemPrompt, userPrompt)
 
-await message.sendRich(rich.md(markdown))
+await message.sendRich(rich.raw.md(markdown))
 ```
 
 without `@puregram/rich`, send the string straight through the api:
@@ -195,7 +195,7 @@ the grammar above was captured and verified against the telegram bot api rich-me
 
 ## see also
 
-- `puregram-rich` — the safe builder/template emitter (`rich.md` / `rich.html` + every builder) for hand-authored rich content
+- `puregram-rich` — native-blocks builders/templates for hand-authored rich content, plus the `rich.raw.*` passthrough used here
 - `puregram-stream` — stream model output into a telegram message via live edits
 - `puregram-markup` — entity formatting for plain (non-rich) messages
 - `using-puregram` — `telegram.api.*`, the three-layer api, `.extend(plugin)`
