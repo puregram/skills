@@ -73,6 +73,8 @@ the live list lives at the exported `MEDIA_METHOD_TO_KEY_MAP` and `ALLOWED_MEDIA
 
 the default keyer is `(ctx) => String(ctx.params.chat_id)`, so the same `./cat.png` cached for chat A doesn't leak into chat B. that's the safe default — sticker / document permissions can vary between private and group chats, and a `file_id` minted in one chat can be unusable in another.
 
+`file_id`s are also **bot-scoped** — an id minted by one bot token is invalid for every other bot (reuse across chats *within* one bot is exactly what this plugin banks on). when several bots share one storage backend, keep their caches apart (separate stores, or a bot-id prefix in `getStorageKey`); entries never transfer between bots.
+
 to share a single global cache (fine for fully public assets):
 
 ```ts
