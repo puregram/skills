@@ -2,7 +2,7 @@
 name: puregram-rich
 description: >
   use when working with `@puregram/rich` in puregram v3 — the native-blocks
-  authoring layer for telegram's rich messages (bot api 10.2+). builders and
+  authoring layer for telegram's rich messages. builders and
   template tags emit `TelegramInputRichBlock[]` directly. covers the `rich`
   namespace (callable composition, `md` / `markdown` / `html` parse tags with
   `.lenient`, `raw.md` / `raw.html` passthrough), every inline builder (`bold` /
