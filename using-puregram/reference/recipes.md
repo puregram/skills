@@ -234,6 +234,8 @@ await tg.startPolling({ allowedUpdates: ['inline_query', 'chosen_inline_result']
 
 `InlineQueryResult.article` is one of the camelCase exceptions — `input_message_content` → `content`, `reply_markup` → `replyMarkup`, `thumbnail_*` → `thumbnail: { url, width?, height?, mimeType? }`.
 
+this answers every keystroke with final content. when results are expensive to produce, defer the work instead — see recipe 16.
+
 ## 8. broadcast to many users with rate-limit handling
 
 opt into `retryOnFloodWait` so 429s auto-sleep + retry. catch leftover `ApiError` codes (user blocked the bot, etc.) and skip:
@@ -492,6 +494,57 @@ await tg.startPolling()
 for plugins that need other plugins, set `dependsOn: ['session']` and the installer resolves install order topologically (throws `PluginCycle` on a cycle, `PluginMissingDep` if a dep isn't installed).
 
 for plugins that need lifecycle hooks (background tasks, periodic flushes), use `tg.useHook('onInit', ...)` and `tg.useHook('onShutdown', ...)` from inside `install`.
+
+## 16. inline bot that defers heavy work to `chosen_inline_result`
+
+don't render the expensive thing per keystroke — answer with a cheap placeholder and inject the real content only for the result actually sent. three telegram-side preconditions (details in [`telegram-quirks.md`](telegram-quirks.md)): inline feedback enabled at **100%** via @botfather's `/setinlinefeedback`, an inline keyboard on every result (no keyboard → no `inline_message_id` → uneditable forever), and a callback-button fallback because feedback is lossy even at 100%:
+
+```ts
+import { Telegram, InlineQueryResult, InputMessageContent, InlineKeyboard } from 'puregram'
+
+const tg = Telegram.fromToken(process.env.TOKEN!)
+
+const keyboard = InlineKeyboard.keyboard([
+  InlineKeyboard.textButton({ text: 'refresh', payload: 'refresh' })
+])
+
+tg.onInlineQuery((query) => query.answer({
+  cache_time: 0,
+  results: [
+    InlineQueryResult.article({
+      id: query.query || 'empty',
+      title: `render "${query.query}"`,
+      content: InputMessageContent.text('rendering…'),
+      replyMarkup: keyboard
+    })
+  ]
+}))
+
+async function inject (inlineMessageId: string, query: string) {
+  await tg.api.editMessageText({
+    inline_message_id: inlineMessageId,
+    text: await renderExpensiveThing(query),
+    reply_markup: keyboard // edits drop the keyboard unless re-passed
+  })
+}
+
+tg.onChosenInlineResult(async (chosen) => {
+  if (!chosen.hasInlineMessageId()) return
+
+  await inject(chosen.inlineMessageId, chosen.query)
+})
+
+tg.onCallbackQuery(async (query) => {
+  if (!query.hasInlineMessageId()) return
+
+  await query.answer()
+  await inject(query.inlineMessageId, 'refresh')
+})
+
+await tg.startPolling({ allowedUpdates: ['inline_query', 'chosen_inline_result', 'callback_query'] })
+```
+
+the same edit path is how bots without fragment usernames get custom emoji into inline messages: entities are ignored in the initial result but honored when the message is edited (bot owner needs premium — see the quirks sheet).
 
 ## see also
 

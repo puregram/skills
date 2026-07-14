@@ -6,7 +6,10 @@ description: >
   `update.send`, `.extend(plugin)`, request hooks, dispatch middleware,
   `MediaSource`, keyboards, parse-mode, filters, `ApiError` / `suppress: true`,
   polling or webhook (express / fastify / koa / hono / h3 / elysia / web / raw
-  http). esm-only, node 22+, bot api 10.1. not for puregram v2.
+  http), telegram-side quirks (inline-mode lifecycle / `chosen_inline_result` /
+  `inline_message_id`, custom-emoji gates, edit & delete limits,
+  `allowed_updates`, privacy mode). esm-only, node 22+, bot api 10.2. not for
+  puregram v2.
 allowed-tools: >
   Bash(node *skills/using-puregram/tools/get-method.mjs*),
   Bash(node *skills/using-puregram/tools/get-object.mjs*),
@@ -412,7 +415,7 @@ every update class is **codegen'd** from the bot-api schema, so:
 
 - primitive fields are direct getters: `message.text`, `message.messageId`, `callbackQuery.data`
 - nested-object fields are lazy + memoized wrappers: `message.from` (a `User`), `message.chat` (a `Chat`)
-- per-kind shortcuts are attached as methods: `message.send(...)`, `message.reply(...)`, `message.edit(...)`, `message.delete()`, `message.react('👍')` (emoji string or `TelegramReactionType[]`), `callbackQuery.answer(...)`
+- per-kind shortcuts are attached as methods: `message.send(...)`, `message.reply(...)`, `message.edit(...)`, `message.delete()`, `message.react('👍')` (emoji string, or a `Reaction.{emoji,customEmoji,paid}[]` array), `callbackQuery.answer(...)`
 - `update.kind` is a literal-typed discriminant, `update.is('message')` narrows the type, `update.raw` is always the bot-api payload as-is
 
 ```ts
@@ -426,6 +429,23 @@ tg.onUpdate((update) => {
   if (update.is('message') && update.hasText()) {
     return update.send(`echo: ${update.text}`)
   }
+})
+```
+
+### uniform accessors
+
+a few accessors keep the same name across kinds, so cross-kind code never juggles spellings:
+
+- `update.senderId` — the acting user's id on every kind whose payload identifies one (`callback_query`, `inline_query`, `pre_checkout_query`, `chat_member`, `business_connection`, …). messages fall back `from.id` → `sender_chat.id` → `chat.id`; `poll_answer` / `message_reaction` fall back to their anonymous-chat actor and may be `undefined`. `callbackQuery.userId` remains as an alias
+- `update.tg.bot` — the bot's own identity (`TelegramUser`, the `getMe` result, resolved before dispatch starts) — for mention-stripping, deep links, self-detection
+- `message.startPayload` — the deep-link payload after `/start` (`t.me/<bot>?start=ref-42` → `'ref-42'`), `string | undefined`, grounded in the `bot_command` entity telegram parsed — a `/start@other_bot` addressed to a different bot yields `undefined`. `hasStartPayload()` narrows; `filters.start` gates handlers on /start but is regex-based and mention-agnostic by design
+
+callback queries carry the message-scoped edit family — `edit`, `editCaption`, `editMedia`, `editReplyMarkup`, `editRich`, `delete` — auto-filling `chat_id` + `message_id` from the originating message, or `inline_message_id` for inline-mode messages (those resolve `true` instead of the edited message; `delete` throws for them — nothing to delete):
+
+```ts
+tg.onCallbackQuery(async (query) => {
+  await query.edit(`page ${page + 1}`, { reply_markup: pagerKeyboard(page + 1) })
+  await query.answer()
 })
 ```
 
@@ -575,6 +595,20 @@ tg.use(filters.kind.message, async (message, next) => {
   await next()
 })
 ```
+
+per-update augmentation — the `req.user` pattern — goes through `attach` (exported from `puregram`). it defines a non-enumerable property and its assertion signature narrows the update in scope:
+
+```ts
+import { attach, filters } from 'puregram'
+
+tg.use(filters.kind.message, async (message, next) => {
+  attach(message, 'user', await db.users.get(message.senderId))
+  message.user // typed — no casts
+  await next()
+})
+```
+
+downstream handlers see the property at runtime; to type it there, gate them on a filter whose `Mod` type declares the shape — `defineFilter<MessageUpdate, { user: DbUser }>('hasUser', u => 'user' in u)` — the same mechanism `filters.regex` uses for `update.match`.
 
 middlewares are **prioritized** — `'high'` runs first, then `'normal'` (the default), then user `tg.on<Kind>(...)` handlers, then `'low'`:
 
@@ -733,7 +767,7 @@ if (Telegram.isErrorResponse(r)) {
 }
 ```
 
-for dispatch-side errors (thrown inside an `on<Kind>` handler) use `tg.catch(fn)`. without a catch handler, puregram is loud by default — errors rethrow on a microtask so node's `uncaughtException` fires. set `swallowDispatchErrors: true` to suppress that fallback:
+for dispatch-side errors (thrown inside an `on<Kind>` handler) use `tg.catch(fn)`. without a catch handler, puregram is loud by default — errors rethrow on a microtask so node's `uncaughtException` fires, and starting the bot with neither a catch handler nor `swallowDispatchErrors` emits a `PUREGRAM_NO_DISPATCH_ERROR_HANDLER` process warning. set `swallowDispatchErrors: true` to suppress the crash fallback:
 
 ```ts
 const tg = new Telegram({
@@ -905,6 +939,25 @@ two constructor knobs, both off by default:
 const tg = new Telegram({ token: process.env.TOKEN!, autoAnswerCallbackQuery: true, dedupeUpdates: true })
 ```
 
+## telegram-side quirks
+
+the bot api has load-bearing behavior its reference buries in footnotes. the full sheet lives in [`reference/telegram-quirks.md`](reference/telegram-quirks.md) — read it whenever a bot touches inline mode, custom emoji, message editing, reactions, groups, or forum topics. the rules that most often break bots:
+
+| quirk | rule |
+|---|---|
+| inline mode | the *user's client* sends the chosen result — the bot never sees a `message_id` or chat. the only handle is `inline_message_id`, and it exists **only if the result carried an inline keyboard** |
+| `chosen_inline_result` | off until `/setinlinefeedback` in @botfather; probability must be 100% for functional use — and it's *still* lossy (cache hits, anonymous admins, scheduled sends), so pair it with a callback-button fallback |
+| editing inline messages | `editMessage*({ inline_message_id })` instead of chat + message id; returns `true`, not a `Message`; media edits can't upload new files (`file_id` / url only); **deleting is impossible** — tombstone-edit instead |
+| custom emoji | senders: fragment-username bots, or any bot whose **owner has premium**, for direct sends to private/group/supergroup. failure is silent — only the fallback emoji shows. initial inline results ignore them; *editing* the inline message afterwards applies them |
+| edits drop keyboards | `editMessageText` / `editMessageCaption` must re-pass `reply_markup` every time or the buttons vanish; identical content 400s with `message is not modified` |
+| edit / delete windows | bots edit their own messages with no time limit; `deleteMessage` has a 48h ceiling (admin `can_delete_messages` lifts it); reply-keyboard messages are never editable |
+| `allowed_updates` | default excludes `chat_member`, `message_reaction`, `message_reaction_count` — those handlers silently never fire until subscribed (see [polling](#polling)); reactions also require the bot to be a chat admin |
+| privacy mode | non-admin group bots see only commands / replies / via-bot / service messages — free-text prompts break in groups; toggling `/setprivacy` requires remove + re-add |
+| first contact | bots can't dm first (403 until the user writes once); 403 `bot was blocked by the user` = unsubscribe signal |
+| forum General topic | its id is 1, but sends to it must **omit** `message_thread_id` — passing `1` fails with `message thread not found` |
+
+the flagship pattern hiding in these rules — inline bots that defer heavy work: answer `inline_query` with cheap placeholders (each carrying an inline keyboard), then render the real content on `chosen_inline_result` via `tg.api.editMessageText({ inline_message_id })`. full code in the quirks sheet and [`reference/recipes.md`](reference/recipes.md).
+
 ## local bot api server
 
 the [official local bot api server](https://github.com/tdlib/telegram-bot-api) speaks the same bot api as the cloud, so it's a drop-in — set `apiBaseUrl` + `useLocal`:
@@ -1005,7 +1058,7 @@ written in typescript, ships its own `.d.ts` — no `@types/puregram`. node 22+,
 
 ## conventions
 
-- esm-only. no cjs build is shipped — `"type": "module"` in your `package.json` is required
+- esm-only, no cjs build — `"type": "module"` in your `package.json` for `import`. on node ≥ 22.12, `require('puregram')` also works (require-esm); node 22.0–22.11 throws `ERR_REQUIRE_ESM`, meaning upgrade or use `import`
 - node 22+, typescript 5.4+
 - one bot api version per puregram release (currently **bot api 10.2**). no multiplexing — upgrade puregram to upgrade the schema
 - plugins must namespace under `plugin.name`. top-level `tg` namespace pollution is rejected by the registry
@@ -1028,6 +1081,11 @@ v2 is frozen on the `lord` branch (currently `2.27.0`). v3 is a hard break — t
 | `inspectable` decorators | `Symbol.for('nodejs.util.inspect.custom')` codegen |
 | `experimentalDecorators` required | no decorators needed |
 | `undici` runtime dep | native `fetch` + pluggable `HttpClient` |
+| escaped handler errors logged, bot keeps running | crash-by-default — register `tg.catch(...)` or set `swallowDispatchErrors: true` (a startup warning points at this) |
+| `context.telegram.bot` | `update.tg.bot` (typed on `TelegramLike`, populated before dispatch) |
+| `senderId` on `Context` | `update.senderId` on every `from`-bearing kind (`callbackQuery.userId` stays as an alias) |
+| `startPayload` coerced to number/json (`any`) | `message.startPayload` is `string \| undefined`, parsed from the `bot_command` entity |
+| snake_case factory params | camelCase extras bags (`replyMarkup`, `parseMode`); `InlineQueryResult.*` flattens `input_message_content` → `content` and `thumbnail_*` → `thumbnail: { url, … }` |
 
 if you're porting a bot: read the new examples, write the migration by hand, file an issue if something's genuinely unclear.
 
@@ -1036,5 +1094,7 @@ if you're porting a bot: read the new examples, write the migration by hand, fil
 - repo: [`github.com/puregram/puregram`](https://github.com/puregram/puregram)
 - examples: [`examples/`](https://github.com/puregram/puregram/tree/v3/examples)
 - per-package READMEs under [`packages/*/README.md`](https://github.com/puregram/puregram/tree/v3/packages)
+- recipes: [`reference/recipes.md`](reference/recipes.md)
+- telegram-side quirks: [`reference/telegram-quirks.md`](reference/telegram-quirks.md)
 - bot api reference: [core.telegram.org/bots/api](https://core.telegram.org/bots/api)
 - telegram chat: [`t.me/pureforum`](https://t.me/pureforum)
