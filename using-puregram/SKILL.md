@@ -491,13 +491,13 @@ inside handlers, ephemeral is automatic: a `MessageUpdate` wrapping an incoming 
 
 inline mode cannot produce ephemeral messages: an inline-mode callback carries only `inline_message_id` + `chat_instance`, never a `chat_id`, and every send method needs `chat_id` — so there is nothing to send an ephemeral message into. the inline-native private reveal is `answerCallbackQuery({ text, show_alert: true })` (a popup only the presser sees). a true in-chat ephemeral is reachable from an inline callback only if you have separately cached that chat's `chat_instance → chat_id` from a normal (non-inline) callback.
 
-every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
+every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, `onSubscription` (bot api 10.2 — paid-subscription changes, `BotSubscriptionUpdated`), etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
 
 use `node skills/using-puregram/tools/get-update.mjs <kind|ClassName>` to look up any wrapped update class — it prints all inherited getters/methods and shows the dispatcher name.
 
 ### service events
 
-service events are `TelegramMessage`-derived updates dispatched when the underlying payload has a matching field set: `new_chat_members`, `left_chat_member`, `new_chat_title`, `migrate_to_chat`, `pinned_message`, `video_chat_started`, `forum_topic_created`, `web_app_data`, etc. they share the `MessageShared` base with regular messages, so all message helpers (`send`, `reply`, `delete`, `pin`) work as expected. each has its own `tg.onX(...)` dispatcher.
+service events are `TelegramMessage`-derived updates dispatched when the underlying payload has a matching field set: `new_chat_members`, `left_chat_member`, `new_chat_title`, `migrate_to_chat`, `pinned_message`, `video_chat_started`, `forum_topic_created`, `web_app_data`, `community_chat_added`, `community_chat_removed` (bot api 10.2 — `tg.onCommunityChatAdded` / `tg.onCommunityChatRemoved`), etc. they share the `MessageShared` base with regular messages, so all message helpers (`send`, `reply`, `delete`, `pin`) work as expected. each has its own `tg.onX(...)` dispatcher.
 
 ## filters
 
