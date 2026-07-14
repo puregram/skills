@@ -53,7 +53,7 @@ for deeper topics see the companion sibling skills:
 - `puregram-callback-data` — `@puregram/callback-data` (`defineCallbackData`, typed callback payloads, `.button`, `.filter`, `.with`)
 - `puregram-testing` — `@puregram/test` (actor-driven test framework for puregram bots)
 - `puregram-markup` — `@puregram/markup` (tagged-template entity-aware formatting; composes message entities, no `parse_mode` header needed)
-- `puregram-rich` — `@puregram/rich` (safe emitter for rich-message html/markdown; templates, block-array, builders, sendRich/editRich shortcuts)
+- `puregram-rich` — `@puregram/rich` (native-blocks rich-message authoring; parse tags, builders, raw passthrough, sendRich/editRich shortcuts)
 - `puregram-media-cacher` — `@puregram/media-cacher` (transparent `file_id` caching plugin, drop-in via `onBeforeRequest`)
 - `puregram-rate-limit` — `@puregram/rate-limit` (inbound per-user fixed-window rate limiting; distinct from outbound `@puregram/throttler`)
 - `puregram-file-id` — `@puregram/file-id` (parse / inspect / serialize telegram `file_id` and `file_unique_id` strings)
@@ -450,7 +450,7 @@ import { ReplyParameters } from 'puregram'
 message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
 
-`update.sendRich` (alias `sendRichMessage`) and its `replyWithRich` twin send a rich message — you build an `InputRichMessage` as a raw `{ html }` or `{ markdown }` string telegram parses server-side (ergonomic builders live in `@puregram/rich`). `sendDraft` / `sendRichDraft` are the draft twins. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject directly (chat + user auto-filled), while `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })` drive the guard-bot query flow (query id auto-filled).
+`update.sendRich` (alias `sendRichMessage`) and its `replyWithRich` twin send a rich message — an `InputRichMessage` carries native `blocks`, a raw `{ html }` / `{ markdown }` string telegram parses server-side, or a `RichLike` envelope (`@puregram/rich` builds all three). `sendDraft` / `sendRichDraft` are the draft twins. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject directly (chat + user auto-filled), while `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })` drive the guard-bot query flow (query id auto-filled).
 
 ### `update.thread`
 
@@ -480,11 +480,14 @@ tg.onBusinessMessage(message => message.reply('on the connection'))   // + busin
 tg.onMessage(message => message.reply('regular'))                     // omitted (not a business msg)
 ```
 
-outside an update — or to bind a connection explicitly — `tg.business(connectionId)` returns a scoped `tg.api` that injects `business_connection_id` into every call (a call-site value still wins):
+outside an update — or to bind a connection explicitly — `tg.business(connectionId)` returns a scoped `tg.api` that injects `business_connection_id` into every call (a call-site value still wins). `tg.ephemeral(receiverUserId, callbackQueryId?)` is the same pattern for ephemeral group messages (bot api 10.2+), injecting `receiver_user_id` (+ optional `callback_query_id`); the two proxies don't chain — pass the other id as a call-site param:
 
 ```ts
 await tg.business(connectionId).sendMessage({ chat_id, text: 'on behalf of the account' })
+await tg.ephemeral(userId).sendMessage({ chat_id, text: 'only you can see this' })
 ```
+
+inside handlers, ephemeral is automatic: a `MessageUpdate` wrapping an incoming ephemeral command (check with `update.isEphemeral()`) auto-fills `receiver_user_id` + `reply_parameters.ephemeral_message_id` on every send/reply (an ephemeral message can only be answered ephemerally, within 15s), and its `edit`/`editCaption`/`editMedia`/`editReplyMarkup`/`delete` route to the `editEphemeralMessage*`/`deleteEphemeralMessage` twins. opt out per call with `ephemeral: false` — `update.send('for everyone', { ephemeral: false })` sends a regular chat message (the flag never reaches the wire). on `CallbackQueryUpdate` sends, pass `receiver_user_id` to go ephemeral — `callback_query_id` then auto-fills from the query (never injected otherwise, so regular responses stay public). explicit call-site values always win. gotchas learned live: `receiver_user` on an incoming ephemeral command is the BOT (the injection targets the non-bot party — you rarely need to touch it); a user's reply to an ephemeral message is itself ephemeral with `message_id: 0`; ephemeral messages are replyable for only ~15s.
 
 every kind has a matching `tg.on<Kind>(handler)` — `onMessage`, `onEditedMessage`, `onChannelPost`, `onCallbackQuery`, `onInlineQuery`, `onChatMember`, `onPoll`, etc. picking a kind that doesn't exist is a compile error. for cross-kind handlers or custom predicates, `tg.onUpdate(...)` is the catch-all.
 
