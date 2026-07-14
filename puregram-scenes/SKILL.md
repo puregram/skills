@@ -269,6 +269,7 @@ other techniques the same flow leans on:
 - **one morphing "control panel" message** — stash the menu's `message_id` in `scene.state` and `editMessageText` it on every screen change instead of spamming new messages. an in-place toggle (✅/▫️) just flips a boolean in state and redraws that one message
 - **mixed update kinds in one scene** — `StepScene<State, MessageUpdate | CallbackQueryUpdate>`; narrow per step with `update.is('message')` / `update.is('callback_query')`, and `answer()` taps to clear the spinner
 - **submit → another chat** — on the final step `update.api.sendMessage({ chat_id: ORDERS_CHAT, ... })`, then `scene.leave()`
+- **group scenes need buttons or force-reply** — privacy-mode bots never receive plain group text, so free-text steps silently stall in groups; use callback buttons, send prompts with `ForceReply`, or run the bot as admin (see `using-puregram` → `reference/telegram-quirks.md`)
 
 full worked example (contact request → preferences hub → type sub-menu → engraving free-text → gift-wrap toggle → per-field-editable confirmation → submit-to-chat): [`examples/recipes/order-wizard`](https://github.com/puregram/puregram/tree/v3/examples/recipes/order-wizard).
 
