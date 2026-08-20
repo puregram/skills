@@ -71,11 +71,13 @@ async function run ({ flags, query }) {
   printFactory(hit)
 }
 
+// puregram re-exports its own InlineQueryResult / InputMessageContent / InputMedia / MediaGroup, which shadow the
+// generated ones and take friendlier params, so they must be collected first — mergeMembers keeps the first signature
 const SOURCES = [
-  { pkg: '@puregram/api', rel: 'lib/generated/factories.d.ts' },
   { pkg: 'puregram', rel: 'lib/factories', dir: true },
   { pkg: 'puregram', rel: 'lib/keyboards', dir: true },
-  { pkg: 'puregram', rel: 'lib/media-source/index.d.ts' }
+  { pkg: 'puregram', rel: 'lib/media-source/index.d.ts' },
+  { pkg: '@puregram/api', rel: 'lib/generated/factories.d.ts' }
 ]
 
 async function collectFactories (apiDir, coreDir) {
