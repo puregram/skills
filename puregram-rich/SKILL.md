@@ -199,6 +199,12 @@ envelopes pass through the emitted blocks untouched; puregram core resolves them
 
 `RichMediaKind` is `'photo' | 'video' | 'audio' | 'animation' | 'voice_note' | 'document'`.
 
+for the `media[]` array a **raw** dialect string references, build entries with core's `RichMedia`
+factory instead of hand-writing them — `RichMedia.document(id, src)` for the entry and
+`RichMedia.link('document', id)` for the `tg://document?id=` reference, so the id is written once.
+a document in a raw dialect string **must** go through `media[]`; a plain https url in
+`<tg-document src>` is rejected with `RICH_MESSAGE_DOCUMENT_NO_MEDIA_FOUND`.
+
 ## the `Rich` envelope
 
 ```ts
