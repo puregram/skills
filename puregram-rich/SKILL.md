@@ -8,12 +8,13 @@ description: >
   `.lenient`, `raw.md` / `raw.html` passthrough), every inline builder (`bold` /
   `italic` / `underline` / `strikethrough` / `spoiler` / `code` / `marked` /
   `subscript` / `superscript` / `link` / `mentionUser` / `math` / `customEmoji` /
-  `time` / `reference` / `anchor` / `footnoteRef`), every block builder
-  (`heading` / `paragraph` / `codeBlock` / `blockquote` / `divider` / `list` /
-  `orderedList` / `taskList` / `details` / `mathBlock` / `footer` / `pullQuote` /
-  `media` / `photo` / `video` / `audio` / `animation` / `voiceNote` / `thinking` /
-  `map` / `collage` / `slideshow` / `table` / `footnote`), MediaSource uploads in
-  media builders, the `Rich` envelope (`.blocks` / `.rtl()` /
+  `time` / `reference` / `anchor` / `footnoteRef` / `button`), every block
+  builder (`heading` / `paragraph` / `codeBlock` / `blockquote` /
+  `expandableBlockquote` / `divider` / `list` / `orderedList` / `taskList` /
+  `details` / `mathBlock` / `footer` / `pullQuote` / `media` / `photo` / `video` /
+  `audio` / `animation` / `voiceNote` / `document` / `thinking` / `map` /
+  `collage` / `slideshow` / `table` / `buttonRow` / `footnote`), MediaSource
+  uploads in media builders, the `Rich` envelope (`.blocks` / `.rtl()` /
   `.noEntityDetection()` / `.toMarkdown()` / `.toHtml()` /
   `.toInputRichMessage()`), strict vs lenient parsing, and interpolation
   splicing semantics.
@@ -120,6 +121,7 @@ all emit native `RichText` entities. content args accept `RichContent`.
 | `reference(text, name)` | `anchor_link` |
 | `anchor(name)` | `anchor` |
 | `footnoteRef(id, label?)` | `reference_link` |
+| `button(label, options)` | `button` — see [buttons](#buttons) |
 
 **aliases:** `strike`, `sub`, `sup`, `mention`, `emoji`, `fnRef`.
 
@@ -131,6 +133,7 @@ all emit native `RichText` entities. content args accept `RichContent`.
 | `paragraph` | `(content)` |
 | `codeBlock` | `(code, language?)` → `pre` (code is raw, untouched) |
 | `blockquote` | `(content, credit?)` |
+| `expandableBlockquote` | `(content, credit?)` — collapsed by default; takes inline content, not nested blocks |
 | `divider` | `()` |
 | `list` | `(items)` |
 | `orderedList` | `(items, { start?, type? })` — `type`: `'a' \| 'A' \| 'i' \| 'I' \| '1'` label style |
@@ -140,16 +143,44 @@ all emit native `RichText` entities. content args accept `RichContent`.
 | `footer` | `(content)` |
 | `pullQuote` | `(content, cite?)` |
 | `thinking` | `(content)` — **`sendRichMessageDraft` only**, can't appear in a sent message |
-| `media` | `(src, { type?, caption?, credit?, spoiler? })` — kind inferred from url extension, `photo` for envelopes |
-| `photo` / `video` / `audio` / `animation` / `voiceNote` | `(src, options)` — kind fixed; `spoiler` applies to photo/video/animation only |
+| `media` | `(src, { type?, caption?, credit?, spoiler? })` — kind inferred from the url extension (document-ish extensions → `document`, unknown → `photo`), `photo` for envelopes |
+| `photo` / `video` / `audio` / `animation` / `voiceNote` / `document` | `(src, options)` — kind fixed; `spoiler` applies to photo/video/animation only |
 | `map` | `(lat, long, { zoom?, width?, height?, caption?, credit? })` — defaults zoom 15, 900×450 |
 | `collage` / `slideshow` | `(mediaNodes, { caption?, credit? })` |
-| `table` | `(rows, { header?, align?, bordered?, striped?, caption? })` — first row is the header unless `header: false` |
+| `table` | `(rows, { header?, align?, bordered?, striped?, compact?, caption? })` — first row is the header unless `header: false` |
+| `buttonRow` | `(buttons, { align? })` — 1-8 `button(...)` nodes, `align`: `'left' \| 'center' \| 'right'` |
 | `footnote` | `(id, definition)` — pairs with `footnoteRef(id)` |
 
-**aliases:** `quote`, `pre`, `hr`, `fn`. composition helpers: `join(items, separator?)`, `br()`.
+**aliases:** `quote`, `pre`, `hr`, `fn`, `expandableQuote`. composition helpers: `join(items, separator?)`, `br()`.
 
 `caption` + `credit` build a `RichBlockCaption`; a `credit` without a `caption` throws.
+
+### buttons
+
+`button(label, options)` is an inline node — it lives inside a text run. `buttonRow(buttons, { align? })` is the block that holds 1-8 of them. `options` takes exactly **one** action plus an optional `style` (`'danger' | 'success' | 'primary' | 'link'`, omitted means the app default):
+
+| action | value |
+|---|---|
+| `url` | `string` |
+| `callbackData` | `string` |
+| `webApp` | `string` (the web-app url) |
+| `loginUrl` | `string` (shorthand for `{ url }`) or `{ url, forwardText?, botUsername?, requestWriteAccess? }` |
+| `switchInlineQuery` / `switchInlineQueryCurrentChat` | `string` |
+| `switchInlineQueryChosenChat` | `{ query?, allowUserChats?, allowBotChats?, allowGroupChats?, allowChannelChats? }` |
+| `copyText` | `string` |
+| `disabled` | `true` |
+
+```ts
+rich([
+  rich.paragraph(['press ', rich.button('me', { callbackData: 'ok', style: 'success' })]),
+  rich.buttonRow([
+    rich.button('open', { url: 'https://t.me' }),
+    rich.button('soon', { disabled: true })
+  ], { align: 'center' })
+])
+```
+
+`RichError` on zero or more than one action, on an empty row, on more than 8 buttons, and on anything but `button(...)` nodes in a row. a `loginUrl` with `botUsername` emits fine as native blocks but throws on `toMarkdown()` / `toHtml()` — that field has no dialect attribute.
 
 ### media sources
 
@@ -165,6 +196,8 @@ rich([
 ```
 
 envelopes pass through the emitted blocks untouched; puregram core resolves them at send time (upload via `attach://`, file_id/url substituted inline). this works for `blocks[].…` media and `InputRichMessage.media[]` entries alike — serialization to a dialect string (`toMarkdown()`) throws for envelope media.
+
+`RichMediaKind` is `'photo' | 'video' | 'audio' | 'animation' | 'voice_note' | 'document'`.
 
 ## the `Rich` envelope
 
@@ -202,7 +235,7 @@ inline queries: `InputMessageContent.rich(richObject)` wraps the envelope for an
 
 ## errors
 
-- `RichError` — misuse: raw envelope composed into blocks, dialect-mismatched serialization, block builder in inline content, credit without caption, envelope media serialized to a string, parse input over the length bound
+- `RichError` — misuse: raw envelope composed into blocks, dialect-mismatched serialization, block builder in inline content, credit without caption, a button without exactly one action, a button row outside 1-8 buttons or holding non-button nodes, envelope media serialized to a string, parse input over the length bound
 - `RichParseError extends RichError` — grammar violations in strict parses; carries `.position` and `.source`
 
 ## exported surface

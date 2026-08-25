@@ -8,7 +8,7 @@ description: >
   polling or webhook (express / fastify / koa / hono / h3 / elysia / web / raw
   http), telegram-side quirks (inline-mode lifecycle / `chosen_inline_result` /
   `inline_message_id`, custom-emoji gates, edit & delete limits,
-  `allowed_updates`, privacy mode). esm-only, node 22+, bot api 10.2. not for
+  `allowed_updates`, privacy mode). esm-only, node 22+, bot api 10.3. not for
   puregram v2.
 allowed-tools: >
   Bash(node *skills/using-puregram/tools/get-method.mjs*),
@@ -22,7 +22,7 @@ allowed-tools: >
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram
-  bot_api: "10.2"
+  bot_api: "10.3"
   package: "puregram@3"
 ---
 
@@ -500,14 +500,16 @@ tg.onBusinessMessage(message => message.reply('on the connection'))   // + busin
 tg.onMessage(message => message.reply('regular'))                     // omitted (not a business msg)
 ```
 
-outside an update — or to bind a connection explicitly — `tg.business(connectionId)` returns a scoped `tg.api` that injects `business_connection_id` into every call (a call-site value still wins). `tg.ephemeral(receiverUserId, callbackQueryId?)` is the same pattern for ephemeral group messages, injecting `receiver_user_id` (+ optional `callback_query_id`); the two proxies don't chain — pass the other id as a call-site param:
+outside an update — or to bind a connection explicitly — `tg.business(connectionId)` returns a scoped `tg.api` that injects `business_connection_id` into every call (a call-site value still wins). `tg.ephemeral(receiverUserId, { callbackQueryId?, replaceCallbackQueryMessage? })` is the same pattern for ephemeral group messages, and it is method-aware: send-family methods get a nested `ephemeral_message_parameters` object, the `editEphemeralMessage*` / `deleteEphemeralMessage` family gets a flat `receiver_user_id`, methods that take neither are left alone. call-site params override the bound ones field by field; the two proxies don't chain — pass the other id as a call-site param:
 
 ```ts
 await tg.business(connectionId).sendMessage({ chat_id, text: 'on behalf of the account' })
 await tg.ephemeral(userId).sendMessage({ chat_id, text: 'only you can see this' })
+
+await tg.api.sendMessage({ chat_id, text: 'only you can see this', ephemeral_message_parameters: { receiver_user_id: userId } })
 ```
 
-inside handlers, ephemeral is automatic: a `MessageUpdate` wrapping an incoming ephemeral command (check with `update.isEphemeral()`) auto-fills `receiver_user_id` + `reply_parameters.ephemeral_message_id` on every send/reply (an ephemeral message can only be answered ephemerally, within 15s), and its `edit`/`editCaption`/`editMedia`/`editReplyMarkup`/`delete` route to the `editEphemeralMessage*`/`deleteEphemeralMessage` twins. opt out per call with `ephemeral: false` — `update.send('for everyone', { ephemeral: false })` sends a regular chat message (the flag never reaches the wire). on `CallbackQueryUpdate` sends, pass `receiver_user_id` to go ephemeral — `callback_query_id` then auto-fills from the query (never injected otherwise, so regular responses stay public). explicit call-site values always win. gotchas learned live: `receiver_user` on an incoming ephemeral command is the BOT (the injection targets the non-bot party — you rarely need to touch it); a user's reply to an ephemeral message is itself ephemeral with `message_id: 0`; ephemeral messages are replyable for only ~15s.
+inside handlers, ephemeral is automatic: a `MessageUpdate` wrapping an incoming ephemeral command (check with `update.isEphemeral()`) auto-fills `ephemeral_message_parameters.receiver_user_id` + `reply_parameters.ephemeral_message_id` on every send/reply (an ephemeral message can only be answered ephemerally, within 15s), and its `edit`/`editCaption`/`editMedia`/`editReplyMarkup`/`delete` route to the `editEphemeralMessage*`/`deleteEphemeralMessage` twins (those keep the flat `receiver_user_id`). opt out per call with `ephemeral: false` — `update.send('for everyone', { ephemeral: false })` sends a regular chat message (the flag never reaches the wire). on `CallbackQueryUpdate` sends, pass `ephemeral_message_parameters` to go ephemeral — `callback_query_id` then auto-fills from the query (never injected otherwise, so regular responses stay public). explicit call-site values always win. gotchas learned live: `receiver_user` on an incoming ephemeral command is the BOT (the injection targets the non-bot party — you rarely need to touch it); a user's reply to an ephemeral message is itself ephemeral with `message_id: 0`; ephemeral messages are replyable for only ~15s.
 
 inline mode cannot produce ephemeral messages: an inline-mode callback carries only `inline_message_id` + `chat_instance`, never a `chat_id`, and every send method needs `chat_id` — so there is nothing to send an ephemeral message into. the inline-native private reveal is `answerCallbackQuery({ text, show_alert: true })` (a popup only the presser sees). a true in-chat ephemeral is reachable from an inline callback only if you have separately cached that chat's `chat_instance → chat_id` from a normal (non-inline) callback.
 
@@ -1060,7 +1062,7 @@ written in typescript, ships its own `.d.ts` — no `@types/puregram`. node 22+,
 
 - esm-only, no cjs build — `"type": "module"` in your `package.json` for `import`. on node ≥ 22.12, `require('puregram')` also works (require-esm); node 22.0–22.11 throws `ERR_REQUIRE_ESM`, meaning upgrade or use `import`
 - node 22+, typescript 5.4+
-- one bot api version per puregram release (currently **bot api 10.2**). no multiplexing — upgrade puregram to upgrade the schema
+- one bot api version per puregram release (currently **bot api 10.3**). no multiplexing — upgrade puregram to upgrade the schema
 - plugins must namespace under `plugin.name`. top-level `tg` namespace pollution is rejected by the registry
 - `tg.api.X(...)` throws `ApiError` on failure. `tg.api.X({..., suppress: true})` returns `T | ApiResponseError`; use `Telegram.isErrorResponse(value)` as the type guard
 - `tg.api.call('method', params)` always throws (no `suppress` on the string escape hatch)

@@ -10,6 +10,7 @@ description: >
   `fromEventEmitter`) plus duck-typed auto-detect, `parseMode: 'MarkdownV2' |
   'HTML'` integration with `@puregram/markup`, `editIntervalMs` /
   `maxEditBackoff` / `thinkingPlaceholder` pacing, `signal` aborts, the
+  user-facing stop button (`canStop` / `keepOnStop` / `result.stopped`), the
   4096-char rollover, rich-message streaming via `rich` (`sendRichMessageDraft`
   + `sendRichMessage`, 32768-char limit), and the `StreamResult` return shape.
   private-chat-only.
@@ -32,6 +33,7 @@ mental model — every chunk yielded by the source flows into a *draft* (telegra
 - you want automatic 4096-char rollover into a chain of messages, no math required
 - you want entity-aware streaming via `parseMode: 'MarkdownV2' | 'HTML'` — lenient per-tick, strict on finalize, so a half-emitted bold doesn't kill the stream
 - you want `AbortSignal`-driven cancellation that still finalizes the last-good draft
+- you want the user to be able to stop generation from the message itself (`canStop`)
 - you want a tested abort/error/backoff model instead of writing the `setTimeout` + `editMessageText` loop yourself
 
 **private chats only** — telegram only allows `sendMessageDraft` in private chats. the plugin throws synchronously *before consuming the source* if you target a group, channel, or forum thread. in those chats, send a regular message with `tg.send` / `update.send` instead.
@@ -166,6 +168,23 @@ same engine — adapters, pacing, callbacks, abort, reply/thread forwarding all 
 - **`link_preview_options` ignored** in rich mode (`sendRichMessage` has no such param)
 - `is_rtl` / `skip_entity_detection` are not exposed
 
+## stopping a stream
+
+`canStop: true` puts `can_stop` on every draft the run ships, so telegram renders a stop button next to the preview. pressing it gives you a `stopped_message_generation` update; the plugin matches it against that run's own draft ids in that chat and stops only the matching run:
+
+```ts
+const result = await message.stream(llmStream, { canStop: true, keepOnStop: true })
+
+if (result.stopped) {
+  await message.send('(stopped)')
+}
+```
+
+- `keepOnStop: true` (sent as `keep_on_stop` on every draft) commits the accumulated buffer through the usual terminal `sendMessage`, so the partial answer stays in the chat
+- without it the unfinished window is dropped — windows that already rolled over into real messages stay
+- `result.stopped` is `true`, `messages` holds whatever was committed, and nothing throws
+- the plugin watches the update in a `high`-priority `onUpdate` hook that always calls `next()`, so your own `tg.onStoppedMessageGeneration(...)` handlers still run
+
 ## options
 
 | option | type | default | notes |
@@ -175,6 +194,8 @@ same engine — adapters, pacing, callbacks, abort, reply/thread forwarding all 
 | `editIntervalMs` | `number` | `250` | soft floor between `sendMessageDraft` calls — pieces yielded faster than this are coalesced |
 | `maxEditBackoff` | `number` | `4000` | drop a draft tick if local backoff exceeds this. the finalize `sendMessage` is never dropped |
 | `thinkingPlaceholder` | `boolean` | `true` | emit an empty draft eagerly on start so the user sees "typing…" immediately |
+| `canStop` | `boolean` | off | `can_stop` on every draft — telegram shows a stop button and reports presses as `stopped_message_generation` |
+| `keepOnStop` | `boolean` | off | `keep_on_stop` on every draft — on stop, commit the partial buffer instead of discarding it |
 | `draftIdOffset` | `number` | derived | base offset for the rolling draft id. `update.stream(...)` derives `message_id << 8`; `tg.stream(...)` uses a counter |
 | `signal` | `AbortSignal` | — | aborts mid-stream, finalizes the last-good buffer, sets `result.aborted = true`, **no rethrow** |
 | `message_thread_id` | `number` | — | forwarded to telegram |
@@ -197,10 +218,11 @@ interface StreamResult {
   bytes: number                  // total text bytes streamed
   skipped: number                // draft ticks coalesced or dropped under back-pressure
   aborted: boolean               // true iff AbortSignal triggered
+  stopped: boolean               // true iff a stop button press ended the run
 }
 ```
 
-`messages` is always non-empty on success — at minimum the terminal `sendMessage` lands. on early abort, `messages` carries whatever finalized before the abort fired.
+`messages` is always non-empty on success — at minimum the terminal `sendMessage` lands. on early abort, `messages` carries whatever finalized before the abort fired; on a stop without `keepOnStop` it can be empty.
 
 ## error handling
 
@@ -208,6 +230,7 @@ interface StreamResult {
 |---|---|
 | source throws mid-stream | stop pulling, finalize last-good via `sendMessage`, call `onError`, rethrow |
 | `AbortSignal.abort()` | stop pulling, finalize last-good, set `result.aborted = true`, no rethrow |
+| user presses stop (`canStop`) | stop pulling, set `result.stopped = true`, commit the partial only with `keepOnStop`, no rethrow |
 | target chat is not private | throws synchronously **before** consuming the source |
 | `maxEditBackoff` exceeded on a draft | drop the draft tick, `skipped += 1`, continue |
 | terminal `sendMessage` fails | never dropped — bubbles up |
