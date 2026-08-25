@@ -398,16 +398,21 @@ rich.document('https://x/d.zip', { caption: 'a file' })
 rules that bite:
 
 - **media is a block.** it can never sit inside a paragraph or a table cell.
-- **dialects accept http(s) urls only.** to reuse an uploaded file or upload a new one from a
-  dialect string, put it in `media[]` and reference it by id:
+- **photo / video / audio accept http(s) urls in a dialect; documents do not.** verified against
+  the live api: `![](https://…/logo.png)` yields a `photo`, but `<tg-document src="https://…">`
+  answers `RICH_MESSAGE_DOCUMENT_NO_MEDIA_FOUND`. a document in a dialect string **must** go
+  through `media[]`:
 
   ```json
-  { "markdown": "![](tg://photo?id=hero)",
-    "media": [{ "id": "hero", "media": { "type": "photo", "media": "<file_id or attach://…>" } }] }
+  { "markdown": "<tg-document src=\"tg://document?id=note\"></tg-document>",
+    "media": [{ "id": "note", "media": { "type": "document", "media": "<file_id or attach://…>" } }] }
   ```
 
   the link forms are `tg://photo?id=`, `tg://video?id=`, `tg://document?id=` and
-  `tg://audio?id=`. ids are 1–64 chars of `A-Z a-z 0-9 _ -`.
+  `tg://audio?id=` — those four only; `tg://animation?id=` is not recognized (it falls through to
+  photo handling). ids are 1–64 chars of `A-Z a-z 0-9 _ -`. in puregram, `RichMedia.document(id,
+  src)` builds the entry and `RichMedia.link('document', id)` builds the reference, so the id is
+  written once.
 - markdown's `![](url "caption")` has no slot for `credit` or a spoiler; both drop.
 - `collage` and `slideshow` group media blocks and take their own caption.
 
