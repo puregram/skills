@@ -349,11 +349,14 @@ const removed = new RemoveKeyboard()
 const forced = new ForceReply().setPlaceholder('your answer here')
 ```
 
-`InlineKeyboard.textButton({ text, payload })` is the common case for `callback_data`. other inline factories: `urlButton`, `webAppButton`, `copyButton`, `switchToChatButton`, `switchToCurrentChatButton`, `switchToChosenChatButton`, `loginButton`, `payButton`, `gameButton` — each with a short alias (`text`, `url`, `webApp`, `copy`, `switchToChat`, …) and an optional `style` (`ButtonStyle.Primary` / `.Danger` / `.Success`), `iconCustomEmojiId` and `disabled`. reply-side `Keyboard` mirrors it: `textButton`, `requestUsersButton`, `requestChatButton`, `requestContactButton`, `requestLocationButton`, `requestPollButton`, `webAppButton`.
+`InlineKeyboard.textButton({ text, payload })` is the common case for `callback_data`. other inline factories: `urlButton`, `webAppButton`, `copyButton`, `switchToChatButton`, `switchToCurrentChatButton`, `switchToChosenChatButton`, `loginButton`, `payButton`, `gameButton`, `disabledButton` — each with a short alias (`text`, `url`, `webApp`, `copy`, `switchToChat`, …) and an optional `style` (`ButtonStyle.Primary` / `.Danger` / `.Success`), `iconCustomEmojiId` and `disabled`. reply-side `Keyboard` mirrors it: `textButton`, `requestUsersButton`, `requestChatButton`, `requestContactButton`, `requestLocationButton`, `requestPollButton`, `webAppButton`.
 
-`disabled: true` (bot api 10.3) renders an inline button that does nothing — inline buttons only,
-reply-keyboard buttons have no such field. telegram accepts and sends it (`"disabled":{}` on the
-wire) but omits it from the returned message's `reply_markup`, so it cannot be read back.
+`disabled` (bot api 10.3) is an **action**, not a decoration — inline buttons only, reply-keyboard
+buttons have no such field. `InlineKeyboardButton` takes exactly one action and `disabled` is one
+of them, so `disabled: true` on any factory **replaces** that factory's action and the `payload` /
+`url` is dropped. `InlineKeyboard.disabledButton({ text })` says it directly. telegram silently
+discards `disabled` on a button that still carries an action, so sending both leaves the button
+live. `style` and `iconCustomEmojiId` survive alongside it and echo back.
 
 `.forceReply(true?)` (bot api 10.3) on `InlineKeyboard`, `InlineKeyboardBuilder` and `Keyboard`
 opens the reply interface alongside the keyboard. on an inline keyboard the flag cannot change on
@@ -363,7 +366,7 @@ a later edit:
 await tg.send(chatId, 'what should I call you?', {
   reply_markup: InlineKeyboard.keyboard([[
     InlineKeyboard.text({ text: 'skip', payload: 'skip' }),
-    InlineKeyboard.text({ text: 'later', payload: 'later', disabled: true })
+    InlineKeyboard.disabledButton({ text: 'later' })
   ]]).forceReply()
 })
 ```
