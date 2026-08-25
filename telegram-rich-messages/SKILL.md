@@ -498,6 +498,11 @@ single-line construct.
 - **markdown silently drops** `is_bordered` / `is_striped` / `is_compact`, table captions, media
   credits and media spoilers. use `blocks` or html when those matter.
 - **an empty `<a name="x"></a>`** on its own line is an anchor, not a link.
+- **a returned `document` block carries its payload under `audio`.** telegram answers
+  `{ "type": "document", "audio": { file_id, file_name, mime_type, file_size } }` even though
+  `RichBlockDocument` declares the key as `document`. verified against the live api with
+  `text/plain`, `application/zip` and `application/json` — read both keys when parsing a received
+  rich message. the send side is unaffected; `InputRichBlockDocument.document` is correct.
 
 ## version floors
 
