@@ -12,7 +12,7 @@ description: >
   mention, hashtag, cashtag, bot command, custom emoji, date-time, math, button, anchor,
   anchor link, reference, reference link, text mention). also limits, media reuse via
   `tg://photo?id=`, entity auto-detection, rtl, drafts, ephemeral rich messages, and
-  reading a received `RichMessage` back. bot api 10.3.
+  reading a received `RichMessage` back.
 ---
 
 # telegram rich messages
@@ -498,6 +498,25 @@ single-line construct.
 - **markdown silently drops** `is_bordered` / `is_striped` / `is_compact`, table captions, media
   credits and media spoilers. use `blocks` or html when those matter.
 - **an empty `<a name="x"></a>`** on its own line is an anchor, not a link.
+
+## version floors
+
+verified against the committed schema snapshots, not from memory:
+
+| construct | first in |
+|---|---|
+| `sendRichMessage`, `sendRichMessageDraft`, `InputRichMessage` (`html` / `markdown` only) | 10.1 |
+| the native `blocks` input path — every `InputRichBlock*` class | 10.2 |
+| `media[]` + the `tg://photo?id=` style links | 10.2 |
+| `thinking` block | 10.2 |
+| `buttons` block, inline `button` text node, `RichMessageButton` | 10.3 |
+| `expandable_blockquote` | 10.3 |
+| `document` block, `tg://document?id=` | 10.3 |
+| `table.is_compact` | 10.3 |
+| `can_stop` / `keep_on_stop` on both draft methods | 10.3 |
+
+so on a 10.1 server rich messages exist but you can only author them as dialect strings — there
+is no `blocks` array to send.
 
 ## see also
 
