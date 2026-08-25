@@ -443,6 +443,7 @@ every update class is **codegen'd** from the bot-api schema, so:
 
 - primitive fields are direct getters: `message.text`, `message.messageId`, `callbackQuery.data`
 - nested-object fields are lazy + memoized wrappers: `message.from` (a `User`), `message.chat` (a `Chat`)
+- a handful of `T[]` fields surface as **collection wrappers**, not plain arrays — iterable, array still on `.raw`, plus the query you wanted: `message.photo` / `video.cover` → `Photo` (`.biggest`, `.smallest`, `.byMin(width)`), `video.qualities` → `VideoQualities` (same, plus `.byCodec('h264')`), `oldReaction` / `newReaction` / `added` / `removed` → `Reactions` (`.emojis`, `.customEmojiIds`, `.has(emoji)`, `.hasCustomEmoji(id)`, `.hasPaid()`), `message_reaction_count`'s `reactions` → `ReactionCounts` (`.total`, `.top`, `.countOf(emoji)`, `.countOfCustomEmoji(id)`, `.countOfPaid()`), `poll.options` → `PollOptions` (`.winner`, `.totalVotes`, `.byId(persistentId)`). iterating yields the wrapped element type (`Photo` → `PhotoSize`); `Reactions` yields raw entries because `ReactionType` is a bare union with no wrapper class
 - per-kind shortcuts are attached as methods: `message.send(...)`, `message.reply(...)`, `message.edit(...)`, `message.delete()`, `message.react('👍')` (emoji string, or a `Reaction.{emoji,customEmoji,paid}[]` array), `callbackQuery.answer(...)`
 - `update.kind` is a literal-typed discriminant, `update.is('message')` narrows the type, `update.raw` is always the bot-api payload as-is
 
