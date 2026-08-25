@@ -103,7 +103,7 @@ the gate ([formatting options](https://core.telegram.org/bots/api#formatting-opt
 - clients render at most ~100 animated custom emoji per message (`message_animated_emoji_max` app config); the rest fall back
 - other surfaces: keyboard-button icons (`icon_custom_emoji_id`, 9.4, same gate); poll questions/options accept **only** `custom_emoji` entities and nothing else; forum-topic icons must come from the `getForumTopicIconStickers` whitelist; a reaction may use a custom emoji only if it's already on the message or explicitly admin-allowed — and bots set at most one reaction, never paid ones
 
-build them with core's `HTML.emoji(fallback, id)` / `MarkdownV2.emoji(fallback, id)`, `@puregram/markup`'s `customEmoji(fallback, id)`, or `@puregram/rich`'s `rich.customEmoji(id, alt)` — never hand-assemble the entity.
+build them with `@puregram/markup`'s `customEmoji(fallback, id)` (the default path), `@puregram/rich`'s `rich.customEmoji(id, alt)` inside a rich message, or core's `HTML.emoji(fallback, id)` / `MarkdownV2.emoji(fallback, id)` when you're stuck on `parse_mode` — never hand-assemble the entity.
 
 ## editing & deleting — the actual rules
 
@@ -140,6 +140,16 @@ build them with core's `HTML.emoji(fallback, id)` / `MarkdownV2.emoji(fallback, 
 - don't treat `message_thread_id` as a topic id unless `is_topic_message` is true — replies in General can carry a reply-thread root that is not a topic
 - topic ids are the `message_id` of the topic-creation service message — topics and messages share one chat-wide id sequence
 - closed topics reject sends until reopened; creating/editing/closing topics needs `can_manage_topics`
+
+## `parse_mode` silently wins over `entities`
+
+the docs only say entities "can be specified instead of `parse_mode`" ([sendMessage](https://core.telegram.org/bots/api#sendmessage)) — they never say what happens when both arrive. measured against the live api, `parse_mode` wins and the `entities` array is **discarded**:
+
+- `{ text: 'hello world', entities: [{ type: 'bold', offset: 0, length: 5 }] }` → the returned message carries the bold entity
+- the same call plus `parse_mode: 'HTML'` → `entities: undefined`. no error, no formatting. identical under `MarkdownV2`, and identical for `caption` / `caption_entities` on `sendPhoto`
+- `{ text: '<b>tags</b> plus entity', entities: [{ type: 'italic', … }], parse_mode: 'HTML' }` → comes back `"tags plus entity"` with a **bold** entity: the tags were parsed, the supplied italic entity thrown away
+
+so a `defaultParams: { '*': { parse_mode: 'HTML' } }` left over from before `@puregram/markup` strips formatting from every send — and when the entity text happens to contain a `<` or a MarkdownV2 reserved char, the send 400s with `can't parse entities` instead. one or the other, never both.
 
 ## entity offsets are utf-16
 

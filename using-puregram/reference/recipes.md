@@ -46,20 +46,20 @@ await tg.startPolling()
 
 ## 3. photo with spoiler caption + typed callback-data button
 
-idiomatic v3 — per-update `sendPhoto(photo, params?)` positional shortcut, `HTML.spoiler` for the caption, `@puregram/callback-data` for the button payload, `.filter` for dispatch:
+idiomatic v3 — per-update `sendPhoto(photo, params?)` positional shortcut, `@puregram/markup` for the caption entity, `@puregram/callback-data` for the button payload, `.filter` for dispatch:
 
 ```ts
-import { HTML, InlineKeyboard, MediaSource, Telegram } from 'puregram'
+import { InlineKeyboard, MediaSource, Telegram } from 'puregram'
+import { markup, spoiler } from '@puregram/markup'
 import { defineCallbackData } from '@puregram/callback-data'
 
 const Press = defineCallbackData('press').string('source')
 
-const tg = Telegram.fromToken(process.env.TOKEN!)
+const tg = Telegram.fromToken(process.env.TOKEN!).extend(markup())
 
 tg.onMessage(async (message) => {
   await message.sendPhoto(MediaSource.path('./cat.jpg'), {
-    caption: HTML.spoiler('caption is a spoiler'),
-    parse_mode: 'HTML',
+    caption: spoiler('caption is a spoiler'),
     reply_markup: InlineKeyboard.keyboard([[Press.button({ text: 'press me', source: 'cat-card' })]])
   })
 })
@@ -442,7 +442,7 @@ await tg.startPolling()
 
 ## 14. auto-inject `parse_mode: 'HTML'` via a request hook
 
-stop writing `parse_mode: 'HTML'` on every send by registering a request hook:
+**only when you're not using `@puregram/markup`.** the two don't mix: telegram discards the `entities` array whenever `parse_mode` is set, so a hook like this silently unformats every markup send. without the plugin, though, it stops you writing `parse_mode: 'HTML'` on every call:
 
 ```ts
 import { Telegram, type RequestContext } from 'puregram'
@@ -465,7 +465,7 @@ tg.onMessage(message => message.send('<b>auto-bold</b> by default'))
 await tg.startPolling()
 ```
 
-works for every `send*` family method that takes `text` or `caption`. `??=` only sets the default — explicit `parse_mode: 'MarkdownV2'` at the call site still wins. for richer entity-aware formatting, install `@puregram/markup` instead.
+works for every `send*` family method that takes `text` or `caption`. `??=` only sets the default — explicit `parse_mode: 'MarkdownV2'` at the call site still wins.
 
 ## 15. custom plugin — adding a typed namespace to `tg`
 

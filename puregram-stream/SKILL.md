@@ -151,6 +151,8 @@ tg.onMessage((message) => {
 
 `@puregram/markup` is an optional peer dependency — it's only required when you actually use `parseMode`. if the strict re-parse fails on finalize (truly malformed output), the plugin falls back to raw text and calls `onError` instead of throwing.
 
+the option name says `parseMode`, but nothing sets `parse_mode` on the wire: markup turns each piece into `text` + `entities`. only when markup isn't installed does the plugin pass the parse mode through raw. so don't add a `defaultParams: { '*': { parse_mode: … } }` — telegram discards `entities` whenever `parse_mode` is present, which would silently unformat every streamed message.
+
 ## rich-message streaming
 
 pass `rich` to stream into a telegram **rich message** (`sendRichMessageDraft` + `sendRichMessage`) instead of flat `parse_mode` text. rich markdown renders headings / lists / code blocks / tables / math, and the limit is 32768 (vs 4096) so rollovers are rarer

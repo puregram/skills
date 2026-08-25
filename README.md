@@ -8,7 +8,7 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 
 ### main entry
 
-- [**using-puregram**](./using-puregram/SKILL.md) — `Telegram.fromToken`, three-layer api (`tg.api.X` / `tg.send` / `update.send`), `.extend(plugin)`, request hooks (incl. the `onApiCall` around-hook), dispatch middleware, `MediaSource`, keyboards, parse-mode, filters, errors, polling vs webhook, `retryOnFloodWait`, `Invoice` builders, pagination iterators, `tg.business`. start here.
+- [**using-puregram**](./using-puregram/SKILL.md) — `Telegram.fromToken`, three-layer api (`tg.api.X` / `tg.send` / `update.send`), `.extend(plugin)`, request hooks (incl. the `onApiCall` around-hook), dispatch middleware, `MediaSource`, keyboards, text formatting, filters, errors, polling vs webhook, `retryOnFloodWait`, `Invoice` builders, pagination iterators, `tg.business`. start here.
 
 ### siblings
 
@@ -18,7 +18,7 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 - [**puregram-storage**](./puregram-storage/SKILL.md) — the `KVStorage<V>` / `TtlStorage<V>` contract that session / scenes / media-cacher / rate-limit all share, plus `enhanceStorage` migrations
 - [**puregram-callback-data**](./puregram-callback-data/SKILL.md) — typed `callback_data` payloads via `defineCallbackData`, `.button`, `.filter`, `.with`
 - [**puregram-testing**](./puregram-testing/SKILL.md) — actor-driven in-process test framework, vitest / mocha / node:test agnostic
-- [**puregram-markup**](./puregram-markup/SKILL.md) — tagged-template entity-aware formatter; composes message entities directly, no `parse_mode` header needed
+- [**puregram-markup**](./puregram-markup/SKILL.md) — the default way to format text: tagged-template entity-aware formatter, composes message entities directly, no `parse_mode` header and nothing to escape
 - [**telegram-rich-messages**](./telegram-rich-messages/SKILL.md) — the rich-message format itself, independent of any SDK: all 24 block types and 26 inline types, wire shapes, limits, media reuse, drafts, and the native-blocks / markdown / html forms side by side
 - [**puregram-rich**](./puregram-rich/SKILL.md) — safe emitter for rich-message html/markdown; templates + block-array authoring + builders, plus the sendRich/editRich shortcuts
 - [**rich-message-authoring**](./rich-message-authoring/SKILL.md) — a system-prompt block that constrains LLM output to telegram's supported rich grammar; for streaming or drafting rich content with a model

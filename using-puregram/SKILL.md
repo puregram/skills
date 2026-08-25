@@ -4,8 +4,9 @@ description: >
   use when writing or modifying telegram bot code with puregram v3 — `puregram` /
   `@puregram/*` imports, `Telegram.fromToken`, `tg.api.X` / `tg.send` /
   `update.send`, `.extend(plugin)`, request hooks, dispatch middleware,
-  `MediaSource`, keyboards, parse-mode, filters, `ApiError` / `suppress: true`,
-  polling or webhook (express / fastify / koa / hono / h3 / elysia / web / raw
+  `MediaSource`, keyboards, text formatting (`@puregram/markup` over
+  `parse_mode`), filters, `ApiError` / `suppress: true`, polling or webhook
+  (express / fastify / koa / hono / h3 / elysia / web / raw
   http), telegram-side quirks (inline-mode lifecycle / `chosen_inline_result` /
   `inline_message_id`, custom-emoji gates, edit & delete limits,
   `allowed_updates`, privacy mode). esm-only, node 22+, bot api 10.3. not for
@@ -37,7 +38,7 @@ puregram is a thin, type-safe wrapper around the [telegram bot api](https://core
 - handling updates (`tg.onMessage`, `tg.onCallbackQuery`, `tg.on('inline_query')`, ...)
 - sending media (`MediaSource.path` / `.url` / `.fileId` / `.buffer` / `.stream`)
 - building keyboards (`Keyboard`, `InlineKeyboard`, `KeyboardBuilder`, `InlineKeyboardBuilder`)
-- formatting messages (`HTML.bold`, `MarkdownV2.escape`, the `@puregram/markup` tagged template)
+- formatting messages — `@puregram/markup` by default (`format`, `bold`, `html`, `md`); core `HTML` / `MarkdownV2` + `parse_mode` only as the no-plugin fallback
 - writing or installing plugins via `tg.extend(plugin)` with `dependsOn` / `tg.has`
 - typed `callback_data` payloads with `@puregram/callback-data` (`defineCallbackData`, `.button`, `.filter`, `.with`)
 - wiring hooks (`onBeforeRequest`, `onRequestIntercept`, `onResponseIntercept`, `onAfterRequest`, `onError`, plus `onInit`, `onUpdate`, `onShutdown`)
@@ -55,7 +56,7 @@ for deeper topics see the companion sibling skills:
 - `puregram-storage` — `@puregram/storage` (the `KVStorage<V>` / `TtlStorage<V>` contract that session/scenes/media-cacher/rate-limit all build on, plus `enhanceStorage` versioned migrations)
 - `puregram-callback-data` — `@puregram/callback-data` (`defineCallbackData`, typed callback payloads, `.button`, `.filter`, `.with`)
 - `puregram-testing` — `@puregram/test` (actor-driven test framework for puregram bots)
-- `puregram-markup` — `@puregram/markup` (tagged-template entity-aware formatting; composes message entities, no `parse_mode` header needed)
+- `puregram-markup` — `@puregram/markup` (tagged-template entity-aware formatting; composes message entities, no `parse_mode` header needed — **the default way to format text**)
 - `puregram-rich` — `@puregram/rich` (native-blocks rich-message authoring; parse tags, builders, raw passthrough, sendRich/editRich shortcuts)
 - `puregram-media-cacher` — `@puregram/media-cacher` (transparent `file_id` caching plugin, drop-in via `onBeforeRequest`)
 - `puregram-rate-limit` — `@puregram/rate-limit` (inbound per-user fixed-window rate limiting; distinct from outbound `@puregram/throttler`)
@@ -166,7 +167,7 @@ const photos = await tg.iterUserProfilePhotos(userId).collect()   // photos.leng
 
 ### default request params
 
-set `defaultParams` once on the client to stop repeating params (most commonly `parse_mode`) at every call site. it merges into every outgoing call across all three layers. precedence is **call-site > per-method > `'*'`**; object-valued params replace wholesale (never deep-merged):
+set `defaultParams` once on the client to stop repeating params at every call site (`link_preview_options`, `message_effect_id`, or `parse_mode` if you're formatting without `@puregram/markup`). it merges into every outgoing call across all three layers. precedence is **call-site > per-method > `'*'`**; object-valued params replace wholesale (never deep-merged):
 
 ```ts
 const tg = Telegram.fromToken(process.env.TOKEN!, {
@@ -186,6 +187,8 @@ await tg.api.sendMessage({ chat_id: chatId, text: '*x*', parse_mode: 'MarkdownV2
 ```
 
 a `'*'` default only lands on methods that actually accept the param (it never adds `parse_mode` to `sendDice`), because core gates it against the schema's per-method param sets. constructor-only — there is no runtime setter.
+
+**a global `parse_mode` and `@puregram/markup` cannot coexist** — telegram ignores the `entities` array whenever `parse_mode` is set, so this default silently unformats every markup send (and 400s when the text holds a `<` or a MarkdownV2 reserved char). pick one.
 
 ### suppressing api errors
 
@@ -242,9 +245,9 @@ puregram ships a class or factory for **every** structured bot-api object. reach
 | invoices / prices | `Invoice.{fiat,stars}` · `LabeledPrice.of` · `ShippingOption.of` | a raw invoice body |
 | bot commands + scopes | `BotCommands.command` + `BotCommands.scope.*` | `{ command, description }` |
 | chat menu button | `MenuButton.{default,commands,webApp}` | `{ type: 'web_app', … }` |
-| text formatting | `HTML` / `Markdown` / `MarkdownV2` (or `@puregram/markup`) | hand-escaped strings |
+| text formatting | `@puregram/markup` (`format` / `bold` / `html` / `md`) — core `HTML` / `Markdown` / `MarkdownV2` + `parse_mode` when you can't add the plugin | hand-escaped `parse_mode` strings |
 
-each is detailed below (`MediaSource`, factories, keyboards, parse mode); run `node skills/using-puregram/tools/get-factory.mjs <Name>` for exact signatures.
+each is detailed below (`MediaSource`, factories, keyboards, formatting); run `node skills/using-puregram/tools/get-factory.mjs <Name>` for exact signatures.
 
 ## media (`MediaSource`)
 
@@ -377,9 +380,28 @@ const kb = new InlineKeyboardBuilder()
 await tg.send(100, 'pick one', { reply_markup: kb })
 ```
 
-## parse mode
+## formatting text
 
-three static helper classes — `HTML`, `Markdown`, `MarkdownV2` — wrap each formatting style. they escape user input for you:
+**default: `@puregram/markup`.** compose entities and let the plugin fill `entities` for you — no `parse_mode`, no escaping, no `400 can't parse entities` because a display name contained `<` or `_`:
+
+```ts
+import { Telegram } from 'puregram'
+import { markup, format, bold, italic } from '@puregram/markup'
+
+const tg = Telegram.fromToken(process.env.TOKEN!).extend(markup())
+
+await tg.send(100, format`${bold('hello')} ${italic(userInput)}`)
+```
+
+core widens `text` / `caption` / every other formattable field to `string | Formattable`, so a `Formatted` value passes through `tg.api.X`, `tg.send` and `update.send` alike; `markup()`'s `onBeforeRequest` hook unwraps it into `text` + `entities` on the way out. it covers every slot that would otherwise need a parse mode, nested ones included — media captions, `sendPoll` question / options / explanation, inline-result contents, `reply_parameters.quote`.
+
+see `puregram-markup` for the full builder surface, the `html` / `htmlb` / `md` parsers (for content that already arrives as a formatted string), custom html tags, and the `Formatted` codec.
+
+**never send `parse_mode` alongside entities.** telegram drops the `entities` array whenever `parse_mode` is present — the message ships with *no formatting at all*, silently. measured against the live bot api: `{ text: 'hello world', entities: [{ type: 'bold', offset: 0, length: 5 }], parse_mode: 'HTML' }` comes back with `entities: undefined`; same for `MarkdownV2`, same for `caption` / `caption_entities`. and when the text happens to contain a `<` (or a MarkdownV2 `.`), it isn't silent: `400 Bad Request: can't parse entities`. the plugin writes `text` + `entities` and never clears a parse mode for you, so drop any `defaultParams: { '*': { parse_mode: … } }` when you install it.
+
+### fallback — `parse_mode` with `HTML` / `Markdown` / `MarkdownV2`
+
+when the plugin isn't an option (throwaway script, no install step) or you need legacy `Markdown` v1, core ships three static helper classes:
 
 ```ts
 import { HTML, MarkdownV2 } from 'puregram'
@@ -388,20 +410,9 @@ await tg.send(100, `${HTML.bold('hello!')} ${HTML.italic('world')}`, { parse_mod
 await tg.send(100, MarkdownV2.bold('hi'), { parse_mode: 'MarkdownV2' })
 ```
 
-each class exposes the canonical set: `bold`, `italic`, `underline`, `strikethrough`, `spoiler`, `code`, `pre`, `link`, `mention`, `blockquote`, `expandableBlockquote`, plus `escape` for raw user input.
+each class exposes the canonical set: `bold`, `italic`, `underline`, `strikethrough`, `spoiler`, `code`, `pre`, `link`, `mention`, `blockquote`, `expandableBlockquote`, plus `escape`. every value you interpolate has to go through `escape` yourself — that's the failure mode markup removes.
 
 `parse_mode` (and the `*_parse_mode` variants) is typed `'HTML' | 'Markdown' | 'MarkdownV2' | (string & {})` — the canonical values autocomplete, but it stays a soft enum since telegram matches case-insensitively, so any string still typechecks.
-
-for a tagged-template api with chained styles that composes message entities directly (no `parse_mode` needed) — look at `@puregram/markup`. example:
-
-```ts
-import { format, bold, italic } from '@puregram/markup'
-
-await tg.send(100, format`${bold('hello')} ${italic(userInput)}`)
-// auto-injects `entities`, no parse_mode header
-```
-
-see `puregram-markup` for the full builder surface, the `html` / `htmlb` / `md` parsers, custom html tags, and the `Formatted` codec.
 
 ## chat actions (typing / upload indicators)
 
@@ -646,7 +657,7 @@ import type { RequestContext } from 'puregram'
 
 tg.useHook('onBeforeRequest', (context: RequestContext, next) => {
   if (context.method === 'sendMessage' && context.params !== undefined) {
-    context.params.parse_mode ??= 'HTML'
+    context.params.disable_notification ??= true
   }
   return next()
 })
@@ -974,6 +985,7 @@ the bot api has load-bearing behavior its reference buries in footnotes. the ful
 | privacy mode | non-admin group bots see only commands / replies / via-bot / service messages — free-text prompts break in groups; toggling `/setprivacy` requires remove + re-add |
 | first contact | bots can't dm first (403 until the user writes once); 403 `bot was blocked by the user` = unsubscribe signal |
 | forum General topic | its id is 1, but sends to it must **omit** `message_thread_id` — passing `1` fails with `message thread not found` |
+| `parse_mode` vs `entities` | setting `parse_mode` makes telegram **discard** the `entities` / `caption_entities` you sent — silently, no error. never combine it with `@puregram/markup` |
 
 the flagship pattern hiding in these rules — inline bots that defer heavy work: answer `inline_query` with cheap placeholders (each carrying an inline keyboard), then render the real content on `chosen_inline_result` via `tg.api.editMessageText({ inline_message_id })`. full code in the quirks sheet and [`reference/recipes.md`](reference/recipes.md).
 
@@ -997,20 +1009,20 @@ wins: 2 GB up/downloads (vs 50 MB / 20 MB), absolute on-disk `file_path`s, http 
 
 ## canonical recipe — photo with spoiler caption and a typed callback-data button
 
-end-to-end, using `@puregram/callback-data` for typed payloads:
+end-to-end, using `@puregram/markup` for the caption and `@puregram/callback-data` for typed payloads:
 
 ```ts
-import { HTML, InlineKeyboard, MediaSource, Telegram } from 'puregram'
+import { InlineKeyboard, MediaSource, Telegram } from 'puregram'
+import { markup, spoiler } from '@puregram/markup'
 import { defineCallbackData } from '@puregram/callback-data'
 
 const Press = defineCallbackData('press').string('source')
 
-const tg = Telegram.fromToken(process.env.TOKEN!)
+const tg = Telegram.fromToken(process.env.TOKEN!).extend(markup())
 
 tg.onMessage(async (message) => {
   await message.sendPhoto(MediaSource.path('./cat.jpg'), {
-    caption: HTML.spoiler('caption is a spoiler'),
-    parse_mode: 'HTML',
+    caption: spoiler('caption is a spoiler'),
     reply_markup: InlineKeyboard.keyboard([[Press.button({ text: 'press me', source: 'cat-card' })]])
   })
 })
@@ -1026,7 +1038,7 @@ await tg.startPolling()
 four things to notice:
 
 1. `message.sendPhoto(photo, params?)` is the per-update shortcut — `chat_id` is auto-filled from `message.chat.id`, photo is positional, everything else goes in `params?`. `message.replyWithPhoto(photo, params?)` is the reply twin (same signature, auto-fills `reply_parameters`)
-2. `HTML.spoiler(text)` returns escaped HTML; pair with `parse_mode: 'HTML'`. for entity-aware formatting without a `parse_mode` header, use `@puregram/markup` (`format\`${spoiler('...')}\``)
+2. `spoiler('...')` from `@puregram/markup` composes the entity itself — no `parse_mode`, nothing to escape. that's the default for formatted text; the core pair `caption: HTML.spoiler(...)` + `parse_mode: 'HTML'` is the fallback when you can't install the plugin
 3. `Press.button({ text, ...payload })` builds an inline button with binary-packed `callback_data` (no JSON, no manual parsing); drop it into `InlineKeyboard.keyboard([[...]])` — never hand-write the raw `{ inline_keyboard: [...] }` shape
 4. `Press.filter` is dispatch-ready — pass it to `tg.onCallbackQuery(...)` and the handler's `q.payload` is fully typed and validated
 

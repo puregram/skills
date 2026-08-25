@@ -1,14 +1,17 @@
 ---
 name: puregram-markup
 description: >
-  use when working with `@puregram/markup` in puregram v3 — entity-based text
-  formatting that builds the `entities` array directly, no `parse_mode` header
-  needed. covers the `markup()` plugin install, every builder (`bold` / `italic`
-  / `code` / `pre` / `link` / `mentionUser` / `time` / `join` / …) in tagged-
-  template + call form, `format` / `formatDedent` composition, the `html` /
-  `htmlb` / `md` parsers with `.define` / `.with` / `.lenient`, custom html
-  tags, the `Formatted` codec (`fromMessage` / `toHtml` / `toMarkdown`),
-  `MarkupParseError`, and the chain rules telegram clients actually honor.
+  use for every piece of formatted telegram text in puregram v3 — bold, italic,
+  links, spoilers, code, quotes, mentions, custom emoji. `@puregram/markup` is
+  the default choice, preferred over hand-writing html / markdown strings with a
+  `parse_mode` header: it builds the `entities` array directly, so nothing needs
+  escaping and no send can die on "can't parse entities". covers the `markup()`
+  plugin install, every builder (`bold` / `italic` / `code` / `pre` / `link` /
+  `mentionUser` / `time` / `join` / …) in tagged-template + call form, `format` /
+  `formatDedent` composition, the `html` / `htmlb` / `md` parsers with `.define`
+  / `.with` / `.lenient`, custom html tags, the `Formatted` codec (`fromMessage`
+  / `toHtml` / `toMarkdown`), `MarkupParseError`, and the chain rules telegram
+  clients actually honor.
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram/tree/v3/packages/markup
@@ -19,9 +22,23 @@ metadata:
 
 entity-aware text formatter for puregram v3. instead of stringly-typed concatenation (`HTML.bold('a') + ' ' + HTML.italic('b')`) it builds the bot-api **`entities` array** directly — no `parse_mode`, no escape bugs, full composability. `tg.extend(markup())` hooks an `onBeforeRequest` unwrapper into every outgoing api call, so a `Formatted` value can be passed anywhere a `text` / `caption` is accepted.
 
+## use this instead of `parse_mode` — by default
+
+`HTML.bold(...)`, `` `<b>${x}</b>` ``, `` `*${x}*` `` + `parse_mode: 'HTML' | 'MarkdownV2'` is the **fallback**, not the norm. reach for markup first, because:
+
+- **no escaping, ever.** under a `parse_mode` the styling travels *inside* the text, so every interpolated value is an injection site. all three of these are live-api measurements: `hello, <script>ilya!` under `'HTML'` → `400 Bad Request: can't parse entities: Unsupported start tag "script" at byte offset 7`; `file saved: report.final.pdf` under `'MarkdownV2'` → `400 … Character '.' is reserved and must be escaped with the preceding '\'`; and legacy `'Markdown'` doesn't even error — `set user_id and chat_id in the config` arrives as `set userid and chatid in the config` with a stray italic entity, underscores eaten. ``format`${bold(userInput)}` `` has nothing to escape: entities travel beside the text, never in it.
+- **it composes.** entities nest and stack (`bold.italic.underline`), and `format` / `join` keep every offset correct across interpolation. concatenating two `parse_mode` fragments doesn't compose — it re-escapes, or double-escapes.
+- **coverage is identical.** every bot-api field that accepts `parse_mode` also accepts a `*_entities` sibling, and the plugin fills all of them from `@puregram/api`'s codegenned `FORMATTABLE_FIELDS` — nested slots included: media-group captions, `sendPoll` question / options / explanation, inline-result message contents, `reply_parameters.quote`. there is no formatting telegram accepts only via a parse mode.
+- **typed end to end.** core widens those fields to `string | Formattable`, so `tg.api.sendMessage`, `tg.send`, `message.send`, `InputMedia.photo(...)`, `InputMessageContent.text(...)` all take a `Formatted` with no cast.
+- **it reads back.** `Formatted.fromMessage(incoming)` reconstructs the value from a received message; `.toHtml()` / `.toMarkdown()` re-serialize when some other system wants a string.
+
+`parse_mode` stays the right call in exactly two spots: you can't add the dependency (throwaway script, no install step), or you need legacy `Markdown` (v1) — markup's `md` parses MarkdownV2 only.
+
+**never set both.** telegram drops the `entities` array whenever `parse_mode` is present — measured: `{ text: 'hello world', entities: [{ type: 'bold', offset: 0, length: 5 }], parse_mode: 'HTML' }` comes back from `sendMessage` with `entities: undefined`, and so does the `MarkdownV2` variant and the `caption` / `caption_entities` pair on `sendPhoto`. so a `parse_mode` riding along silently unformats the whole message (or 400s, if the text holds a `<` or a reserved markdown char). the plugin writes `text` + `entities` and never clears a parse mode for you — drop any `defaultParams: { '*': { parse_mode: 'HTML' } }` when you install markup.
+
 ## when to use this skill
 
-- you're sending styled messages and don't want to think about `parse_mode` / escape rules
+- you're sending any styled message — bold / italic / link / spoiler / code / quote / mention. that's the default case, not a special one
 - you want to interpolate user input safely inside a bold / link / blockquote without manually escaping `*`, `_`, `<`
 - you already have html or markdown source (from a database, llm, config) and want it rendered as telegram entities
 - you need a `time` / `customEmoji` / `mentionUser` (no-username mention) / `pre`-with-language entity
