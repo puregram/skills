@@ -215,10 +215,6 @@ media type is decided by the url and MIME type, which is why one markdown `![]()
 block types. `expandable_blockquote`, `pullquote`, `footer` and `thinking` have no markdown
 syntax at all — reach for the html tag.
 
-> telegram's own docs disagree on the expandable-quote attribute: the rich-html tag list shows
-> `<blockquote expandable>`, while the `InputRichBlockExpandableBlockQuotation` description says
-> the attribute is `"collapsed"`. `expandable` is the one in the worked example.
-
 ### quotes, three kinds
 
 ```json
@@ -355,8 +351,8 @@ rich.buttonRow([
 
 **exactly one action per button**, from: `url`, `callback_data`, `web_app`, `login_url`,
 `switch_inline_query`, `switch_inline_query_current_chat`, `switch_inline_query_chosen_chat`,
-`copy_text`, `disabled`. plus optional `style`: `danger` (red), `success` (green), `primary`
-(blue), `link` (borderless — **callback buttons only**).
+`copy_text`, `disabled`. plus optional `style`: `danger`, `success`, `primary`, `link`
+(borderless — **callback buttons only**). apps pick theme colors from the style.
 
 | action | html attributes |
 |---|---|
