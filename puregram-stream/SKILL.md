@@ -326,5 +326,6 @@ import type {
 - main skill: `using-puregram` — covers `.extend(plugin)`, `update.send` / `tg.send`, `retryOnFloodWait`, the request-hook model
 - sibling: `puregram-markup` — required for `parseMode: 'MarkdownV2' | 'HTML'`. produces the `Formatted` shape that strict-parse rebuilds on finalize
 - sibling: `puregram-flow` — when you want a streaming response inside a `prompt` / `waitFor` flow (the abort signal can be wired to flow cancellation)
+- sibling: `telegram-rich-messages` — the rich-message format itself: every block and inline type, the limits, and the three input forms in parallel
 - sibling: `rich-message-authoring` — when you stream an LLM into a rich message: a system-prompt block that keeps the model's output inside telegram's rich grammar
 - package source: [`packages/stream/`](https://github.com/puregram/puregram/tree/v3/packages/stream)

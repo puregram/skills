@@ -258,6 +258,7 @@ import type {
 
 ## see also
 
+- `telegram-rich-messages` — what rich messages are, independent of puregram: every block and inline type, the wire shapes, the limits, and the markdown / html / blocks forms in parallel
 - `using-puregram` — `telegram.api.*`, the three-layer api, plugin mechanics
 - `rich-message-authoring` — when an **LLM** writes the dialect string for `rich.raw.*`
 - `puregram-stream` — streaming drafts (`sendRichMessageDraft`)

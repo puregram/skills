@@ -24,7 +24,10 @@ telegram **rich messages** take a single raw markdown (or html) string and the s
 
 this skill is the constraint. drop the block below into the system prompt of any call that emits rich content, then send the model's string as the `markdown` (or `html`) field of a rich message.
 
-this skill does **not** cover the `@puregram/rich` builder api (templates, `rich.bold(...)`, the `Rich` envelope) — for that see `puregram-rich`. for streaming model output into a live message, see `puregram-stream`.
+this skill is **only** the constraint. it deliberately does not explain the format: for the full
+rich-message reference — every block and inline type, the wire shapes, the limits, and all three
+input forms side by side — see `telegram-rich-messages`. for the `@puregram/rich` builder api see
+`puregram-rich`, and for streaming model output into a live message see `puregram-stream`.
 
 ## when to use this skill
 
@@ -236,6 +239,7 @@ the grammar above was captured and verified against the telegram bot api rich-me
 
 ## see also
 
+- `telegram-rich-messages` — the full rich-message reference this prompt is a subset of: every block and inline type, wire shapes, limits, and the markdown / html / blocks forms in parallel
 - `puregram-rich` — native-blocks builders/templates for hand-authored rich content, plus the `rich.raw.*` passthrough used here
 - `puregram-stream` — stream model output into a telegram message via live edits
 - `puregram-markup` — entity formatting for plain (non-rich) messages
