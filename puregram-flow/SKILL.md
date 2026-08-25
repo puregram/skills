@@ -141,7 +141,7 @@ use it from cron jobs / webhook endpoints, or when you need cross-chat behavior 
 
 ### multiple waiters on the same update
 
-if more than one waiter matches the same update, **first registered wins** — others keep waiting (FIFO). locked semantics inherited from v2's prompt/waitFor.
+if more than one waiter matches the same update, **first registered wins** — others keep waiting (FIFO). a waiter whose filter rejects the update is skipped, so one unanswered prompt never blocks another chat's.
 
 ### cancellation
 
@@ -267,9 +267,13 @@ await message.send(`hi, ${reply.text}`)
 
 three things happen:
 
-1. sends `text` to the same chat the message came from
-2. opens a `waitFor` auto-scoped to that chat + the same sender
+1. opens a `waitFor` auto-scoped to that chat + the same sender
+2. sends `text` to the same chat the message came from
 3. resolves with the matched reply (or `null` on timeout if `nullOnTimeout: true`)
+
+the waiter is armed **before** the question goes out, so a reply that lands while the send is still in flight still counts — the flip side is that a message the user had already sent can answer the prompt. bind it yourself (`filter` on `message_id`, or require a reply) when the answer must postdate the question.
+
+`timeout` starts once the send resolves, not when `prompt` is called, so a slow send cannot eat the reply budget. a non-numeric chat id throws `FlowChatIdNotNumeric` instead of building a waiter that can never match, and `signal` is forwarded to the waiter.
 
 ### overriding the binding
 
@@ -481,6 +485,7 @@ now `ctx.payload` inside `flow.handle('register:age', ...)` is typed as `{ name:
 | `FlowPersistenceUnconfigured` | called `flow.prompt({ id })` / `flow.waitFor({ id })` without `flow({ storage })` configured |
 | `FlowHandlerMissing` | a persisted record resolves but no `flow.handle(id, ...)` was registered for that id |
 | `FlowKindMismatch` | the `kind` at the call site differs from the kind registered on `flow.handle(...)` |
+| `FlowChatIdNotNumeric` | `flow.prompt` was given a non-numeric chat id (`'@channel'`), which could never match an incoming update |
 
 ```ts
 import { WaitForTimeout, WaiterAbortedError } from '@puregram/flow'

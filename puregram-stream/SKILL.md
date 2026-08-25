@@ -187,6 +187,37 @@ if (result.stopped) {
 - `result.stopped` is `true`, `messages` holds whatever was committed, and nothing throws
 - the plugin watches the update in a `high`-priority `onUpdate` hook that always calls `next()`, so your own `tg.onStoppedMessageGeneration(...)` handlers still run
 
+### stopping from the bot side
+
+`canStop` decides whether telegram renders the button, nothing more — the bot can stop any run, button or not:
+
+```ts
+tg.stream.stop(chatId)  // stops every live run in that chat -> count stopped
+tg.stream.stopAll()     // stops all live runs             -> count stopped
+```
+
+- a bot-side stop is indistinguishable from a user press: pulling stops, `keepOnStop` is honoured identically, `result.stopped === true`
+- both return how many runs they stopped, so `stop(id) === 0` means nothing was running there
+- stopping an already-stopped run is a no-op and does not count
+
+`tg.stream.active` is the live registry, `update.stream(...)` runs included:
+
+```ts
+for (const run of tg.stream.active) {
+  // { chatId, drafts, canStop, stopped }
+}
+```
+
+entries vanish as soon as a run settles, so `active.length === 0` means genuinely idle. the natural pairing is a shutdown hook:
+
+```ts
+tg.useHook('onShutdown', (_ctx, next) => {
+  tg.stream.stopAll()
+
+  return next()
+})
+```
+
 ## options
 
 | option | type | default | notes |
@@ -316,6 +347,7 @@ import type {
   StreamCallOptions,               // shared option shape across update.stream / tg.stream
   StreamTgParams,                  // tg.stream({ chat_id, source, ... }) param shape
   StreamExtension,                 // shape of tg.stream
+  ActiveStream,                    // one entry of tg.stream.active
   StreamSource,                    // discriminated union of accepted source shapes
   StreamResult,                    // return value of stream calls
   StreamApi, RunStreamOptions, StreamForwardOptions, StreamCallbacks,
