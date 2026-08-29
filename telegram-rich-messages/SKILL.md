@@ -369,6 +369,22 @@ rich.buttonRow([
 button labels accept plain text, `custom_emoji` and `date_time` only. `login_url.bot_username`
 has no dialect attribute — send such a button as native blocks.
 
+**buttons are effectively bot-only.** everything above holds when a *bot* sends the message.
+sending the same markdown from a **user account** over mtproto behaves differently, verified
+side by side against both surfaces:
+
+| | bot | user account |
+|---|---|---|
+| `url`, `copy_text` in a `<tg-button-row>` | works | works |
+| `callback_data`, `switch_inline_query` | works | `400 BUTTON_TYPE_INVALID` |
+| `style` | preserved | silently dropped |
+| inline `<tg-button>` inside a paragraph | works, yields a `button` text node | renders the literal string `[object Object]` |
+
+the callback rejection is the expected consequence of user accounts having no callback-query
+channel, but the inline-button case is a serialization bug rather than a refusal — it fails
+silently and puts `[object Object]` in front of the reader. if you render untrusted or
+model-generated markdown from a user account, strip `<tg-button…>` tags before sending.
+
 ### media
 
 six media block types, one caption shape (`{ text, credit? }`).
