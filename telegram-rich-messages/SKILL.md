@@ -474,10 +474,19 @@ never wrote.
 
 ## escaping
 
-**markdown**: any character with code 1–126 can be escaped with a preceding `\`. `&`, `<` and
-`>` are better written as numeric entities (`&#38;` `&#60;` `&#62;`) — rich-markdown renders
-`\<` with the backslash showing. a raw `|` splits a table cell; a blank line ends a
-single-line construct.
+**markdown**: a preceding `\` escapes the markdown metacharacters — verified for
+``\ ` * _ [ ] ( ) ~ = | $ ! # + - > .`` , each of which renders as the bare character. two
+exceptions bite:
+
+- **`\` does not escape a line-start ordered list.** `\1. o` renders with the backslash
+  showing. escape the delimiter instead — `1\. o` — which suppresses the list and renders
+  clean. `\#`, `\-`, `\+` and `\>` at line start do work.
+- **`\<` renders with the backslash showing.** to keep a literal `<` that must not open a tag,
+  use `&#60;` (and `&#38;` for `&`).
+
+`<`, `>` and `&` in ordinary text need no escaping at all — they render literally. entities are
+only needed to stop a sequence being read as a tag. a raw `|` splits a table cell; a blank line
+ends a single-line construct.
 
 **html**: all **numeric** entities work. the only supported **named** entities are `&lt;`
 `&gt;` `&amp;` `&quot;` `&apos;` `&nbsp;` `&hellip;` `&mdash;` `&ndash;` `&lsquo;` `&rsquo;`
@@ -494,6 +503,21 @@ single-line construct.
   `<tg-slideshow>`. inline html tags do parse it.
 - **`<pre>` needs a nested `<code class="language-x">`** to set a language; a standalone
   `<code>` cannot carry one.
+- **a code fence does not protect the enclosing container's closing tag.** a literal
+  `</details>` inside a ` ``` ` fence nested in a `<details>` closes the block early and the
+  whole send is rejected with `RICH_MESSAGE_CONTENT_REQUIRED` — it is a hard error, not a
+  render glitch. an *opening* `<details>` in the same position is worse: it silently swallows
+  every following block into the collapsed section. any other html, e.g. `<b>x</b>`, is
+  literal inside a fence as expected. when you fence untrusted text inside a container, break
+  its closing tags first (a zero-width space after the `<` works and is invisible).
+- **numeric entities are not decoded inside a fence or `<pre>`.** `&#60;` renders as the four
+  literal characters, so you cannot entity-escape fenced content — see the previous point for
+  what to do instead.
+- **link destinations are fragile.** a space anywhere in the destination destroys the link and
+  the whole construct falls back to literal text with the url exposed. the CommonMark angle
+  form `[x](<url>)` is **not** supported and also drops the link. balanced parens
+  (`…/Foo_(bar)`) do work, and `%28`/`%29` work — but note `encodeURIComponent` leaves parens
+  untouched, so percent-encode them yourself if you are sanitising a destination.
 - **table cells and button labels are inline-only.** no blocks inside either.
 - **`thinking` is draft-only**; sending it via `sendRichMessage` fails.
 - **markdown silently drops** `is_bordered` / `is_striped` / `is_compact`, table captions, media
