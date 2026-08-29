@@ -377,13 +377,17 @@ side by side against both surfaces:
 |---|---|---|
 | `url`, `copy_text` in a `<tg-button-row>` | works | works |
 | `callback_data`, `switch_inline_query` | works | `400 BUTTON_TYPE_INVALID` |
-| `style` | preserved | silently dropped |
+| `style` — `primary` / `danger` / `success` | preserved | preserved |
+| `style="link"` | works (callback buttons only) | dropped, since callback buttons are unavailable |
 | inline `<tg-button>` inside a paragraph | works, yields a `button` text node | renders the literal string `[object Object]` |
 
 the callback rejection is the expected consequence of user accounts having no callback-query
 channel, but the inline-button case is a serialization bug rather than a refusal — it fails
-silently and puts `[object Object]` in front of the reader. if you render untrusted or
-model-generated markdown from a user account, strip `<tg-button…>` tags before sending.
+silently and puts `[object Object]` in front of the reader. an unsupported `type` is not
+silent either: it takes the whole message down with `BUTTON_TYPE_INVALID`. so from a user
+account, `url` and `copy_text` rows are the usable set, and they keep their colors. when you
+render untrusted or model-generated markdown, drop rows whose buttons use any other action and
+unwrap any `<tg-button>` that is not inside a `<tg-button-row>`.
 
 ### media
 
