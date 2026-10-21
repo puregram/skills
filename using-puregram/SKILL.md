@@ -454,7 +454,7 @@ every update class is **codegen'd** from the bot-api schema, so:
 tg.onMessage(message => message.send('got it'))
 tg.onMessage(message => message.reply('quoting you'))
 tg.onCallbackQuery(callbackQuery => callbackQuery.answer({ text: 'thanks' }))
-tg.onInlineQuery(inlineQuery => inlineQuery.answer({ results: [] }))
+tg.onInlineQuery(inlineQuery => inlineQuery.answer([]))
 
 // or hook anything via onUpdate
 tg.onUpdate((update) => {
@@ -502,7 +502,7 @@ import { ReplyParameters } from 'puregram'
 message.reply('with a quote', { reply_parameters: ReplyParameters.quote(message.messageId, 'why?') })
 ```
 
-`update.sendRich` (alias `sendRichMessage`) and its `replyWithRich` twin send a rich message — an `InputRichMessage` carries native `blocks`, a raw `{ html }` / `{ markdown }` string telegram parses server-side, or a `RichLike` envelope (`@puregram/rich` builds all three). `sendDraft` / `sendRichDraft` are the draft twins. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject directly (chat + user auto-filled), while `update.answer({ result: 'approve' | 'decline' | 'queue' })` and `update.sendChatJoinRequestWebApp({ web_app_url })` drive the guard-bot query flow (query id auto-filled).
+`update.sendRich` (alias `sendRichMessage`) and its `replyWithRich` twin send a rich message — an `InputRichMessage` carries native `blocks`, a raw `{ html }` / `{ markdown }` string telegram parses server-side, or a `RichLike` envelope (`@puregram/rich` builds all three). `sendDraft` / `sendRichDraft` are the draft twins. on `chat_join_request` updates, `update.approve()` / `update.decline()` accept or reject directly (chat + user auto-filled), while `update.answer('approve' | 'decline' | 'queue')` and `update.sendChatJoinRequestWebApp(webAppUrl)` drive the guard-bot query flow (query id auto-filled).
 
 ### `update.thread`
 
@@ -543,7 +543,7 @@ await tg.api.sendMessage({ chat_id, text: 'only you can see this', ephemeral_mes
 
 inside handlers, ephemeral is automatic: a `MessageUpdate` wrapping an incoming ephemeral command (check with `update.isEphemeral()`) auto-fills `ephemeral_message_parameters.receiver_user_id` + `reply_parameters.ephemeral_message_id` on every send/reply (an ephemeral message can only be answered ephemerally, within 15s), and its `edit`/`editCaption`/`editMedia`/`editReplyMarkup`/`delete` route to the `editEphemeralMessage*`/`deleteEphemeralMessage` twins (those keep the flat `receiver_user_id`). opt out per call with `ephemeral: false` — `update.send('for everyone', { ephemeral: false })` sends a regular chat message (the flag never reaches the wire). on `CallbackQueryUpdate` sends, pass `ephemeral_message_parameters` to go ephemeral — `callback_query_id` then auto-fills from the query (never injected otherwise, so regular responses stay public). explicit call-site values always win. gotchas learned live: `receiver_user` on an incoming ephemeral command is the BOT (the injection targets the non-bot party — you rarely need to touch it); a user's reply to an ephemeral message is itself ephemeral with `message_id: 0`; ephemeral messages are replyable for only ~15s.
 
-`replaceCallbackQueryMessage: true` shows the ephemeral in place of the message the button belonged to, for that one user. group-only in practice — the same call in a private chat comes back `Bad Request: MESSAGE_ID_INVALID`, which fits the feature: a 1:1 chat has nobody to hide the original from. for a button that sits **on** an ephemeral message the flag must be off — telegram enforces that, but reports the violation as `Bad Request: query is too old and response timeout expired or query ID is invalid`, which is not an expired query: the same `callback_query_id` succeeds without the flag one call later. edit those with the `editEphemeralMessage…` family instead. also measured: `editEphemeralMessageMedia` is rejected server-side with `MESSAGE_EMPTY` for every media form (file_id, url, fresh upload), while `editEphemeralMessageText` / `editEphemeralMessageCaption` work on the same target.
+`replaceCallbackQueryMessage: true` shows the ephemeral in place of the message the button belonged to, for that one user. group-only in practice — the same call in a private chat comes back `Bad Request: MESSAGE_ID_INVALID`, which fits the feature: a 1:1 chat has nobody to hide the original from. for a button that sits **on** an ephemeral message the flag must be off — telegram enforces that, but reports the violation as `Bad Request: query is too old and response timeout expired or query ID is invalid`, which is not an expired query: the same `callback_query_id` succeeds without the flag one call later. edit those with the `editEphemeralMessage…` family instead. `editEphemeralMessageMedia` works on 10.3 with a file_id, a url and a fresh upload (re-measured; an earlier measurement before 10.3's "supported upload of new files" change saw `MESSAGE_EMPTY` for every form). the server-side rules, timings and error strings live in the SDK-agnostic `telegram-ephemeral-messages` skill.
 
 inline mode cannot produce ephemeral messages: an inline-mode callback carries only `inline_message_id` + `chat_instance`, never a `chat_id`, and every send method needs `chat_id` — so there is nothing to send an ephemeral message into. the inline-native private reveal is `answerCallbackQuery({ text, show_alert: true })` (a popup only the presser sees). a true in-chat ephemeral is reachable from an inline callback only if you have separately cached that chat's `chat_instance → chat_id` from a normal (non-inline) callback.
 
@@ -977,7 +977,7 @@ const tg = new Telegram({ token: process.env.TOKEN!, autoAnswerCallbackQuery: tr
 
 ## telegram-side quirks
 
-the bot api has load-bearing behavior its reference buries in footnotes. the full sheet lives in [`reference/telegram-quirks.md`](reference/telegram-quirks.md) — read it whenever a bot touches inline mode, custom emoji, message editing, reactions, groups, or forum topics. the rules that most often break bots:
+the bot api has load-bearing behavior its reference buries in footnotes. the server-side rules are measured in the SDK-agnostic skills — `telegram-inline-mode`, `telegram-ephemeral-messages`, `telegram-guest-mode`, `telegram-streaming-replies`, `telegram-groups`, `telegram-business-bots` — with `telegram-bot-api` for live reference lookups; puregram-shaped notes and the remaining topics (custom emoji, editing, reactions, callbacks, formatting) live in [`reference/telegram-quirks.md`](reference/telegram-quirks.md). the rules that most often break bots:
 
 | quirk | rule |
 |---|---|

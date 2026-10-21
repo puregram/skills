@@ -88,7 +88,7 @@ telegram only mints one under specific conditions — all upstream of this parse
 - `chosen_inline_result` itself only arrives with inline feedback enabled (`/setinlinefeedback` in @botfather), and it's lossy even at 100% probability — `callback_query.inline_message_id` is the reliable second source
 - it's the **only** handle the bot ever gets: the real bot-api `chat_id` / `message_id` never surface (this parser recovers the dc + internal ids, which is as close as it gets), edits via it return `true` rather than a `Message`, and inline messages can never be deleted — only edited
 
-the full quirk sheet lives in `using-puregram` → `reference/telegram-quirks.md`.
+guest-mode replies are the exception to the keyboard rule: `answerGuestQuery` always returns `SentGuestMessage.inline_message_id`, keyboard or not (measured on 10.3). the server-side rules for every producer of inline messages live in the SDK-agnostic `telegram-inline-mode` and `telegram-guest-mode` skills.
 
 ## `InlineMessageId.from(string)` — parse an `inline_message_id`
 

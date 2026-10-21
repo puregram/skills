@@ -319,7 +319,7 @@ each prompt's filter is composed independently — answers don't leak between wa
 
 ### group chats — privacy mode eats text answers
 
-a non-admin group bot with privacy mode on (the botfather default) never receives plain group text — a text `prompt` / `waitFor('message')` in a group silently times out. fixes: attach `reply_markup: new ForceReply()` to the prompt (replies to the bot's messages always reach it), wait on buttons instead (`waitForCallbackQuery`), or give the bot admin rights / disable privacy mode. details: `using-puregram` → `reference/telegram-quirks.md`.
+a non-admin group bot with privacy mode on (the botfather default) never receives plain group text — a text `prompt` / `waitFor('message')` in a group silently times out. fixes: attach `reply_markup: new ForceReply()` to the prompt (replies to the bot's messages always reach it), wait on buttons instead (`waitForCallbackQuery`), or give the bot admin rights / disable privacy mode. the measured delivery matrix: the `telegram-groups` skill.
 
 ## `collectMediaGroup` — albums in one call
 
