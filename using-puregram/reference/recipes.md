@@ -216,17 +216,14 @@ const tg = Telegram.fromToken(process.env.TOKEN!)
 tg.onInlineQuery(async (query) => {
   const q = query.query.toLowerCase()
 
-  await query.answer({
-    cache_time: 0,
-    results: [
-      InlineQueryResult.article({
-        id: '1',
-        title: `say "${q}"`,
-        description: `bot will send the literal "${q}"`,
-        content: InputMessageContent.text(q || '(empty)')
-      })
-    ]
-  })
+  await query.answer([
+    InlineQueryResult.article({
+      id: '1',
+      title: `say "${q}"`,
+      description: `bot will send the literal "${q}"`,
+      content: InputMessageContent.text(q || '(empty)')
+    })
+  ], { cache_time: 0 })
 })
 
 await tg.startPolling({ allowedUpdates: ['inline_query', 'chosen_inline_result'] })
@@ -508,17 +505,14 @@ const keyboard = InlineKeyboard.keyboard([
   InlineKeyboard.textButton({ text: 'refresh', payload: 'refresh' })
 ])
 
-tg.onInlineQuery((query) => query.answer({
-  cache_time: 0,
-  results: [
-    InlineQueryResult.article({
-      id: query.query || 'empty',
-      title: `render "${query.query}"`,
-      content: InputMessageContent.text('rendering…'),
-      replyMarkup: keyboard
-    })
-  ]
-}))
+tg.onInlineQuery((query) => query.answer([
+  InlineQueryResult.article({
+    id: query.query || 'empty',
+    title: `render "${query.query}"`,
+    content: InputMessageContent.text('rendering…'),
+    replyMarkup: keyboard
+  })
+], { cache_time: 0 }))
 
 async function inject (inlineMessageId: string, query: string) {
   await tg.api.editMessageText({
