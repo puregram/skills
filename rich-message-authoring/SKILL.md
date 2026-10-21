@@ -2,17 +2,19 @@
 name: rich-message-authoring
 description: >
   use when you need an LLM to produce telegram **rich-message** content (markdown
-  or html) that telegram's rich parser actually accepts — most importantly when
-  streaming model output into a rich message, or when asking a model to draft
-  rich content you'll send via `@puregram/rich` / `sendRichMessage`. provides a
-  copy-pasteable system-prompt block that constrains output to the supported
-  grammar (bold / italic / strikethrough / highlight / spoiler / code / links /
-  custom emoji / math / buttons inline; headings / lists / task lists /
-  blockquotes / expandable quotes / code blocks / dividers / tables / footnotes /
-  media / documents / button rows / collapsible / map / collage / slideshow
-  blocks; the html-tag fallbacks for underline / sub / sup / footer / pull quote /
-  anchor), the exact named-entity set, the hard limits, and
-  contrastive good/bad examples for the mistakes models default to.
+  or html) that telegram's rich parser actually accepts, in any language or SDK —
+  most importantly when streaming model output into a rich message
+  (`sendRichMessageDraft`), or when a model drafts content you send with
+  `sendRichMessage`, `editMessageText` / `editEphemeralMessageText` `rich_message`,
+  or as an inline / guest answer. provides a copy-pasteable system-prompt block
+  that constrains output to the supported grammar (bold / italic / strikethrough /
+  highlight / spoiler / code / links / custom emoji / math / buttons inline;
+  headings / lists / task lists / blockquotes / expandable quotes / code blocks /
+  dividers / tables / footnotes / media / documents / button rows / collapsible /
+  map / collage / slideshow blocks; the html-tag fallbacks for underline / sub /
+  sup / footer / pull quote / anchor), the exact named-entity set, the hard
+  limits, contrastive good/bad examples for the mistakes models default to, and
+  the media rule for inline and guest answers.
 metadata:
   author: starkow
   source: https://github.com/puregram/puregram/tree/v3/docs/plugins/rich-llm-grammar.md
@@ -26,13 +28,13 @@ this skill is the constraint. drop the block below into the system prompt of any
 
 this skill is **only** the constraint. it deliberately does not explain the format: for the full
 rich-message reference — every block and inline type, the wire shapes, the limits, and all three
-input forms side by side — see `telegram-rich-messages`. for the `@puregram/rich` builder api see
-`puregram-rich`, and for streaming model output into a live message see `puregram-stream`.
+input forms side by side — see `telegram-rich-messages`. for streaming model output as a live
+draft see `telegram-streaming-replies`.
 
 ## when to use this skill
 
 - you stream an LLM straight into a telegram rich message and need its tokens to be valid rich markdown
-- you ask a model to draft rich content (a report, a formatted summary) that you'll send via `message.sendRich` / `telegram.api.sendRichMessage`
+- you ask a model to draft rich content (a report, a formatted summary) that you'll send with `sendRichMessage`, an edit, or an inline / guest answer
 - a model keeps emitting `<div>`, `<br>`, `<button>`, unsupported entities, or escaped `<` and telegram renders it wrong
 - you're deciding between the markdown and html dialects for model output (markdown is almost always right)
 
@@ -212,26 +214,50 @@ models default to web html. a few contrastive pairs teach the constraint faster 
 
 ## wiring it into a send
 
-prepend the block to your model call, then hand the model's raw markdown to a rich message. `rich.raw.md(...)` passes the string through unchanged — exactly right for output that's already in the grammar (`rich.md(...)` would parse it client-side into native blocks and throw `RichParseError` on anything outside the grammar; `rich.md.lenient(...)` parses but degrades unknown constructs to literal text):
+prepend the block to your model call, then put the model's raw string into the `markdown` (or
+`html`) field of an `InputRichMessage`. no client-side parsing, no escaping: the server parses it.
 
-```ts
-import { rich } from '@puregram/rich'
-
-const markdown = await runModel(richSystemPrompt, userPrompt)
-
-await message.sendRich(rich.raw.md(markdown))
+```json
+POST sendRichMessage
+{ "chat_id": 123456789, "rich_message": { "markdown": "<the model's output>" } }
 ```
 
-without `@puregram/rich`, send the string straight through the api:
+the same `rich_message` object goes into `editMessageText`, `editEphemeralMessageText`,
+`sendRichMessageDraft`, and `InputRichMessageContent` for inline / guest / web-app answers.
+`rich_message` also takes `is_rtl` and `skip_entity_detection`. set `skip_entity_detection: true`
+if you don't want telegram auto-linking bare urls / `@mentions` / `#hashtags` in the model's text.
 
-```ts
-await telegram.api.sendRichMessage({
-  chat_id: message.chat.id,
-  rich_message: { markdown }
-})
-```
+### streaming
 
-`rich_message` also takes `is_rtl` and `skip_entity_detection` — set `skip_entity_detection: true` if you don't want telegram auto-linking bare urls / `@mentions` / `#hashtags` in the model's text.
+send `sendRichMessageDraft` with the **whole text so far** on every frame (same `draft_id`), then
+finalize with `sendRichMessage`. the draft is a temporary preview and nothing persists until the
+final send. a frame can cut a construct in half (an open code fence, a table without its separator
+row), so if a frame is rejected, skip it and keep the previous one. throttling, the stop button and
+rollover are in `telegram-streaming-replies`.
+
+### inline and guest answers: no URL media
+
+inside `InputRichMessageContent` (inline results, `answerGuestQuery`, `answerWebAppQuery`,
+prepared messages) "only previously uploaded files may be used". an image URL telegram hasn't
+fetched before is rejected for the **whole answer** with `Bad Request: EXTERNAL_MEDIA_NOT_SUPPORTED`
+(measured on 10.3). for those calls:
+
+- remove the `media` / collage / slideshow / `<tg-document>` lines from the prompt, so the model
+  describes images instead of embedding them, **or**
+- let the model write placeholders like `![](tg://photo?id=chart)` and have your code supply files
+  you already uploaded through the `media` array (`{ "id": "chart", "media": { "type": "photo",
+  "media": "<file_id>" } }`). this is the documented route; see `telegram-rich-messages` for the
+  `tg://` link forms
+
+for normal sends (`sendRichMessage` into a chat) http/https media URLs work as the prompt says.
+
+### with puregram
+
+`@puregram/rich`'s `rich.raw.md(markdown)` / `rich.raw.html(html)` pass the string through
+unchanged, which is the right choice for model output: `message.sendRich(rich.raw.md(markdown))`.
+`rich.md(...)` parses client-side into native blocks and throws `RichParseError` on anything outside
+the grammar; `rich.md.lenient(...)` parses but degrades unknown constructs to literal text. for
+streaming, `@puregram/stream` runs the draft loop. see `puregram-rich` and `puregram-stream`.
 
 ## source of truth
 
@@ -240,8 +266,8 @@ the grammar above was captured and verified against the telegram bot api rich-me
 ## see also
 
 - `telegram-rich-messages` — the full rich-message reference this prompt is a subset of: every block and inline type, wire shapes, limits, and the markdown / html / blocks forms in parallel
-- `puregram-rich` — native-blocks builders/templates for hand-authored rich content, plus the `rich.raw.*` passthrough used here
-- `puregram-stream` — stream model output into a telegram message via live edits
-- `puregram-markup` — entity formatting for plain (non-rich) messages
-- `using-puregram` — `telegram.api.*`, the three-layer api, `.extend(plugin)`
+- `telegram-streaming-replies` — drafts, the stop button, throttling and finalizing a streamed answer
+- `telegram-guest-mode` / `telegram-inline-mode` — where answers go through `InputRichMessageContent`
+- `telegram-bot-api` — live lookup of `InputRichMessage` and friends
+- puregram: `puregram-rich` (builders and the `rich.raw.*` passthrough), `puregram-stream` (the draft loop), `puregram-markup` (formatting for plain, non-rich messages)
 - docs: [`/plugins/rich-llm-grammar`](https://github.com/puregram/puregram/tree/v3/docs/plugins/rich-llm-grammar.md)
