@@ -19,7 +19,6 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 - [**puregram-callback-data**](./puregram-callback-data/SKILL.md) — typed `callback_data` payloads via `defineCallbackData`, `.button`, `.filter`, `.with`
 - [**puregram-testing**](./puregram-testing/SKILL.md) — actor-driven in-process test framework, vitest / mocha / node:test agnostic
 - [**puregram-markup**](./puregram-markup/SKILL.md) — the default way to format text: tagged-template entity-aware formatter, composes message entities directly, no `parse_mode` header and nothing to escape
-- [**telegram-rich-messages**](./telegram-rich-messages/SKILL.md) — the rich-message format itself, independent of any SDK: all 24 block types and 26 inline types, wire shapes, limits, media reuse, drafts, and the native-blocks / markdown / html forms side by side
 - [**puregram-rich**](./puregram-rich/SKILL.md) — safe emitter for rich-message html/markdown; templates + block-array authoring + builders, plus the sendRich/editRich shortcuts
 - [**rich-message-authoring**](./rich-message-authoring/SKILL.md) — a system-prompt block that constrains LLM output to telegram's supported rich grammar; for streaming or drafting rich content with a model
 - [**puregram-media-cacher**](./puregram-media-cacher/SKILL.md) — transparent `file_id` caching plugin; first send uploads, every later send reuses the cached id
@@ -30,11 +29,32 @@ these skills are designed for [skills.sh](https://skills.sh) and any agent-skill
 - [**puregram-stream**](./puregram-stream/SKILL.md) — stream LLM output to telegram via animated `sendMessageDraft` previews; adapters for openai / anthropic / vercel ai / ollama / langchain
 - [**puregram-throttler**](./puregram-throttler/SKILL.md) — outbound rate-limit middleware; sliding-window buckets keep your bot under telegram's ~30 rps / per-chat / per-group soft limits
 
+### telegram bot api (any SDK)
+
+these skills describe the server, not a library. the knowledge applies to any language or framework; puregram users get a short pointer per section. behavior that the reference doesn't spell out was measured against the live bot api 10.3 using a bot plus a real user account.
+
+- [**telegram-bot-api**](./telegram-bot-api/SKILL.md) — live lookup over the official reference (methods, types, prose sections, changelog, features page) via `tools/botapi.mjs`, plus how to read the reference and handle api drift. read it before writing raw calls from memory
+- [**telegram-ephemeral-messages**](./telegram-ephemeral-messages/SKILL.md) — group messages visible to one member: triggered (15 s) vs admin delivery, the overlay, ephemeral commands, replies, the edit/delete family, the silent public-message traps, every error string
+- [**telegram-guest-mode**](./telegram-guest-mode/SKILL.md) — answering in chats the bot isn't in: `guest_message`, one `answerGuestQuery` reply, edits via `inline_message_id`, what's impossible, guest vs inline vs member
+- [**telegram-inline-mode**](./telegram-inline-mode/SKILL.md) — the ~10 s answer deadline, caching, pagination, when `inline_message_id` exists, editing inline messages, the four producers of inline messages, validation errors
+- [**telegram-streaming-replies**](./telegram-streaming-replies/SKILL.md) — `sendMessageDraft` / `sendRichMessageDraft`, the stop button and `stopped_message_generation`, rate limits, the finalize rule, a complete streaming loop
+- [**telegram-groups**](./telegram-groups/SKILL.md) — the measured privacy-mode delivery matrix, command scopes, forum topics and the General trap, anonymous admins, group → supergroup migration, admin rights, bot-to-bot
+- [**telegram-business-bots**](./telegram-business-bots/SKILL.md) — bots connected to a user's account: the connection lifecycle, business messages and the chat-id namespace trap, acting as the user, rights → calls, misleading error strings, the 24-hour rule
+- [**telegram-rich-messages**](./telegram-rich-messages/SKILL.md) — the rich-message format itself, independent of any SDK: all 24 block types and 26 inline types, wire shapes, limits, media reuse, drafts, and the native-blocks / markdown / html forms side by side
+
 ### cookbook
 
 - [**recipes**](./using-puregram/reference/recipes.md) — 15 short canonical bot recipes referenced from the main skill
 
 ## lookup tools
+
+`telegram-bot-api` ships [`telegram-bot-api/tools/botapi.mjs`](./telegram-bot-api/tools/botapi.mjs): zero dependencies, node ≥ 18. it fetches the official reference live (cached for 6 h), so it answers for the current api version rather than whatever an SDK or a model remembers:
+
+    node telegram-bot-api/tools/botapi.mjs sendMessage ReplyParameters   # exact entries
+    node telegram-bot-api/tools/botapi.mjs search ephemeral               # ranked search
+    node telegram-bot-api/tools/botapi.mjs refs InlineQueryResult         # where a type is used
+    node telegram-bot-api/tools/botapi.mjs changelog --since 10.0         # what changed
+    node telegram-bot-api/tools/botapi.mjs features "Guest Bots"          # the /bots/features guide
 
 `using-puregram` ships executable lookup tools under [`using-puregram/tools/`](./using-puregram/tools/) — they resolve the user's installed `node_modules/@puregram/api` and `node_modules/puregram` at runtime, so they work in any project that has puregram installed:
 
