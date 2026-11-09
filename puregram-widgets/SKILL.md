@@ -44,8 +44,8 @@ An SDK method existing does not make a server feature generally available.
 
 | Task | Actual API |
 |---|---|
-| Fixed HTML with typed initial state | `defineWidget({ html: html\`…\`, chat: json<C>(), public: json<P>() })` |
-| Immutable HTML differing per message | `defineWidget({ html: (args: A) => html\`…\`, … }).render(args)` |
+| Fixed HTML with typed initial state | ``defineWidget({ html: html`…`, chat: json<C>(), public: json<P>() })`` |
+| Immutable HTML differing per message | ``defineWidget({ html: (args: A) => html`…`, … }).render(args)`` |
 | Send a definition | `tg.sendWidget(chatId, Definition, options)` / `message.sendWidget(Definition, options)` |
 | Reply / topic-scoped send | `message.replyWithWidget(Definition, options)` / `message.thread?.sendWidget(Definition, options)` |
 | Send existing shared widget | `Definition.sendShared(tg, chatId, widgetId, { chat, caption })` |
