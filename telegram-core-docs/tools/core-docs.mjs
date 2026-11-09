@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Catalogue, DEFAULT_TTL, databasePath, pageUrl, parseMarkdown, provenance } from './catalogue.mjs'
-import { synchronizeCatalogue } from './update.mjs'
+import { preserveManagedRead, synchronizeCatalogue } from './update.mjs'
 
 const HELP = `core-docs — searchable official core.telegram.org Markdown
 
@@ -71,6 +71,7 @@ function output(opts, value, text) {
 
 async function main() {
   const { opts, rest } = parseArgs(process.argv.slice(2))
+  const managed = opts.db === undefined && !process.env.TG_CORE_DOCS_DB
   const [command, ...args] = rest
   if (!command || opts.help) {
     process.stdout.write(HELP)
@@ -118,7 +119,12 @@ async function main() {
     if (args.length !== 1) throw new Error(command + ' needs one path or URL')
     const input = new URL(args[0], 'https://core.telegram.org/')
     const fragment = input.hash ? decodeURIComponent(input.hash.slice(1)) : null
-    const document = await catalogue.load(pageUrl(args[0]), opts)
+    const url = pageUrl(args[0])
+    const cached = catalogue.get(url)
+    const document = await catalogue.load(url, opts)
+    if (managed && !opts.offline && !document.warning && document.checkedAt !== cached?.checkedAt) {
+      preserveManagedRead(document, catalogue.path)
+    }
     const source = provenance(document, opts.ttl)
     if (source.warning) process.stderr.write('warning: ' + source.warning + '; using a stale cached page\n')
     if (command === 'read') {

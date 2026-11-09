@@ -60,16 +60,24 @@ these skills describe the server, not a library. the knowledge applies to any la
     node telegram-bot-api/tools/botapi.mjs changelog --since 10.0         # what changed
     node telegram-bot-api/tools/botapi.mjs features "Guest Bots"          # the /bots/features guide
 
-`telegram-core-docs` ships [`telegram-core-docs/tools/core-docs.mjs`](./telegram-core-docs/tools/core-docs.mjs): zero dependencies, node ≥22.13 with built-in SQLite full-text search. Seed it from a read-only tracker backup, then search locally or refresh one selected page:
+`telegram-core-docs` ships [`telegram-core-docs/tools/core-docs.mjs`](./telegram-core-docs/tools/core-docs.mjs): zero dependencies, node ≥22.13 with built-in SQLite full-text search. Online commands automatically download a validated published catalogue, then search locally or refresh a selected page:
 
-    node telegram-core-docs/tools/core-docs.mjs import-tracker /path/to/tracker-backup.sqlite
+    node telegram-core-docs/tools/core-docs.mjs sync --json
     node telegram-core-docs/tools/core-docs.mjs search business bot rights --area bots --limit 5
     node telegram-core-docs/tools/core-docs.mjs read /api/passkeys.md --refresh
     node telegram-core-docs/tools/core-docs.mjs sections /bots/features.md --offline
     node telegram-core-docs/tools/core-docs.mjs read /bots/features.md --section "Guest Bots" --offline
     node telegram-core-docs/tools/core-docs.mjs links /api/auth.md --offline
 
-Both tools accept `--json` and `--offline`. `TG_CORE_DOCS_DB` selects the shared catalogue; the default is `${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs/catalogue.sqlite`. The tracker snapshot's successful scan time is verification metadata, not an invented body-fetch timestamp. Imports copy only healthy public documentation rows, never bot credentials, leases or notification queues. Repeat imports to discover newly tracked URLs; search does not crawl the site. No revision-history lookup is claimed because the tracker stores latest bodies only.
+Both tools accept `--json` and `--offline`; offline mode never accesses the network. With both skills installed on node ≥22.13, online commands check for catalogue updates at most hourly. `--no-sync` or `TG_CORE_DOCS_AUTO_UPDATE=0` opts out. `TG_CORE_DOCS_DB` (or core-docs `--db`) selects a user-managed database, which is never automatically replaced. Managed generations and their atomic `current.json` pointer live under `${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs`; an existing `catalogue.sqlite` remains a fallback. Failed updates keep the last good copy, and newer targeted live reads survive promotion. Source check times remain visible; neither a successful download nor a recent filesystem timestamp is invented proof of live verification.
+
+### scheduled source and parser checks
+
+[`docs-catalogue.yml`](./.github/workflows/docs-catalogue.yml) runs hourly and on manual dispatch in this repository. It crawls `https://core.telegram.org/` directly with bounded concurrency and robots rules, discovers linked official Markdown, and rechecks previously discovered URLs. It requires a complete crawl, at least 1,000 pages, no unexplained loss above 10%, valid SQLite/body hashes and successful structured Bot API parser checks before publishing. Changes to tools run the isolated tests on pushes and pull requests.
+
+The public, non-latest [`docs-catalogue` prerelease](https://github.com/puregram/skills/releases/tag/docs-catalogue) serves a manifest and immutable SHA-256-addressed gzip snapshots. Clients validate size limits, hashes, schema and official source scope before atomic installation. Actions summaries and seven-day report artifacts list changed URLs and skills needing human review; guidance is never blindly rewritten. GitHub schedules are best-effort and can be disabled by GitHub after repository inactivity: stale provenance and targeted `--refresh` remain essential.
+
+This pipeline uses only `GITHUB_TOKEN` for this repository's releases. It needs no Datalix host, SSH key, bot token or tracker database. Optional `import-tracker <backup> --db <file>` still copies only healthy public documentation from a consistent read-only backup, never credentials, leases or notification queues. Search does not crawl the site, and no queryable revision-history API is claimed.
 
 `using-puregram` ships executable lookup tools under [`using-puregram/tools/`](./using-puregram/tools/) — they resolve the user's installed `node_modules/@puregram/api` and `node_modules/puregram` at runtime, so they work in any project that has puregram installed:
 

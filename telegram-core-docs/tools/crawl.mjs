@@ -299,15 +299,20 @@ export async function crawlCatalogue({ outputPath, previousPath = null, seeds = 
               throw httpError(response.status, 'redirect outside official HTTPS Markdown scope')
             }
             redirects.set(url, target)
-            for (const origin of redirects.keys()) {
-              const chain = new Set([origin])
-              let next = origin
-              while (redirects.has(next)) {
-                next = redirects.get(next)
-                if (chain.has(next)) throw httpError(response.status, 'redirect loop')
-                chain.add(next)
-                if (chain.size > MAX_REDIRECTS + 1) throw httpError(response.status, 'too many redirects')
+            try {
+              for (const origin of redirects.keys()) {
+                const chain = new Set([origin])
+                let next = origin
+                while (redirects.has(next)) {
+                  next = redirects.get(next)
+                  if (chain.has(next)) throw httpError(response.status, 'redirect loop')
+                  chain.add(next)
+                  if (chain.size > MAX_REDIRECTS + 1) throw httpError(response.status, 'too many redirects')
+                }
               }
+            } catch (error) {
+              redirects.delete(url)
+              throw error
             }
             return { kind: 'redirect', target }
           }

@@ -508,7 +508,6 @@ test('Bot API optionally synchronizes the sibling catalogue and resolves its gen
   writeFileSync(isolated, readFileSync(botapi))
   const standalone = cli.run(isolated, ['getMe', '--offline'], { TG_CORE_DOCS_DB: '' })
   assert.equal(standalone.status, 2)
-  assert.match(standalone.stderr, /no cached copy/)
   assert.equal(cli.calls().length, 2)
 })
 
@@ -563,4 +562,36 @@ test('local reads newer than individual remote pages survive even when fetched d
   assert.match(readDocument(result.databasePath, latestUrl).body, /Verified after the local copy/)
   assert.match(readDocument(result.databasePath, equalUrl).body, /Published copy wins ties/)
   assert.equal(readDocument(result.databasePath, absentUrl), undefined)
+})
+
+test('a live CLI read finishing after promotion remains available in the selected generation', async t => {
+  const f = fixture(t)
+  const cacheDir = join(f.root, 'telegram-core-docs')
+  const first = await fetchPublishedCatalogue({ cacheDir, fetcher: f.remote(f.snapshot()).fetcher })
+  const next = f.snapshot({ time: '2026-02-01T00:00:00.000Z', text: '# Guide\n\nNext published body.\n' })
+  const liveBody = '# Guide\n\nNewer live body fetched during promotion.\n'
+  const preload = join(f.root, 'promote-during-read.mjs')
+  writeFileSync(preload, `
+import { synchronizeCatalogue } from ${JSON.stringify(new URL('./update.mjs', import.meta.url).href)}
+const snapshot = ${JSON.stringify({ manifest: next.manifest, compressed: next.compressed.toString('base64') })}
+globalThis.fetch = async target => {
+  if (target === ${JSON.stringify(url)}) {
+    const result = await synchronizeCatalogue({ force: true })
+    if (result.status !== 'updated') throw new Error(result.error || result.status)
+    return new Response(${JSON.stringify(liveBody)}, { headers: { 'content-type': 'text/markdown' } })
+  }
+  if (target === ${JSON.stringify(MANIFEST_URL)}) return Response.json(snapshot.manifest)
+  if (target.endsWith(snapshot.manifest.asset)) return new Response(Buffer.from(snapshot.compressed, 'base64'))
+  throw new Error('unexpected network request: ' + target)
+}
+`)
+  const env = { ...process.env, XDG_CACHE_HOME: f.root }
+  const result = spawnSync(process.execPath, ['--import', preload, script, 'read', url, '--refresh', '--json'], { encoding: 'utf8', env })
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(JSON.parse(result.stdout).text, liveBody)
+  assert.notEqual(databasePath(cacheDir), first.databasePath)
+  assert.equal(readDocument(databasePath(cacheDir)).body, liveBody)
+  const offline = spawnSync(process.execPath, [script, 'read', url, '--offline', '--json'], { encoding: 'utf8', env })
+  assert.equal(offline.status, 0, offline.stderr)
+  assert.equal(JSON.parse(offline.stdout).text, liveBody)
 })

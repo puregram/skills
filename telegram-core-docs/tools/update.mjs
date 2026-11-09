@@ -302,6 +302,34 @@ export function synchronizeCatalogue(options = {}) {
   return synchronize(options)
 }
 
+export function preserveManagedRead(document, previousPath, { cacheDir = cacheRoot() } = {}) {
+  if (process.env.TG_CORE_DOCS_DB) return
+  while (true) {
+    const selected = databasePath(cacheDir)
+    if (selected === previousPath) return
+    const catalogue = new Catalogue(selected)
+    try {
+      catalogue.db.exec('BEGIN IMMEDIATE')
+      try {
+        if (databasePath(cacheDir) !== selected) {
+          catalogue.db.exec('ROLLBACK')
+          continue
+        }
+        const existing = catalogue.get(document.url)
+        const generatedAt = currentPointer(cacheDir)?.manifest.generatedAt
+        if (existing || !generatedAt || Date.parse(document.checkedAt) > Date.parse(generatedAt)) catalogue.replace(document)
+        catalogue.db.exec('COMMIT')
+        return
+      } catch (error) {
+        catalogue.db.exec('ROLLBACK')
+        throw error
+      }
+    } finally {
+      catalogue.close()
+    }
+  }
+}
+
 export async function fetchPublishedCatalogue({ cacheDir, fetcher = globalThis.fetch } = {}) {
   if (!cacheDir) throw new Error('fetchPublishedCatalogue requires a private cacheDir')
   const result = await synchronize({ force: true, cacheDir, fetcher, privateCache: true })

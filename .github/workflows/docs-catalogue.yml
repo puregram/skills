@@ -1,0 +1,69 @@
+name: Telegram documentation catalogue
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [lord]
+    paths:
+      - '.github/workflows/docs-catalogue.yml'
+      - 'telegram-core-docs/**'
+      - 'telegram-bot-api/**'
+  pull_request:
+    paths:
+      - '.github/workflows/docs-catalogue.yml'
+      - 'telegram-core-docs/**'
+      - 'telegram-bot-api/**'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Check documentation tools
+        run: node --test telegram-core-docs/tools/*.test.mjs telegram-bot-api/tools/botapi.test.mjs
+
+  publish:
+    if: >-
+      github.repository == 'puregram/skills' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/lord'
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    concurrency:
+      group: telegram-docs-publication
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Crawl Telegram and validate the catalogue
+        run: node telegram-core-docs/tools/build-snapshot.mjs --output .catalogue-release
+      - name: Publish immutable payload and manifest
+        run: node telegram-core-docs/tools/publish-snapshot.mjs .catalogue-release
+      - name: Preserve validation and guidance-review reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: telegram-documentation-report-${{ github.run_id }}
+          path: |
+            .catalogue-release/crawl-report.json
+            .catalogue-release/report.json
+            .catalogue-release/drift.md
+            .catalogue-release/catalogue.json
+          if-no-files-found: ignore
+          retention-days: 7

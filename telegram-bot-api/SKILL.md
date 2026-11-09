@@ -25,10 +25,13 @@ with at most 8 concurrent requests. offline searches warn when only an index is 
 uncached fields and references cannot be searched.
 
 node ≥18 works standalone, without installing another skill or npm dependencies. node ≥22.13
-also reads an **optional, read-only shared catalogue** at `$TG_CORE_DOCS_DB`, otherwise
-`${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs/catalogue.sqlite`. tracker-imported official
-Markdown pages can answer offline lookups and discover methods/types omitted from the fixed
-indexes; names come from actual page headings, not inferred API definitions.
+also reads an **optional shared catalogue**, opened read-only for lookups. With sibling
+`telegram-core-docs` installed, online commands check its validated GitHub release at most
+hourly and use the selected managed generation. `--no-sync` or `TG_CORE_DOCS_AUTO_UPDATE=0`
+disables this check. `$TG_CORE_DOCS_DB` selects a user-managed database and disables automatic
+replacement; existing `catalogue.sqlite` files remain a legacy fallback.
+Official Markdown pages can answer offline lookups and discover methods/types omitted from
+fixed indexes; names come from actual page headings, not inferred API definitions.
 
 the legacy Markdown cache remains at `$TG_BOTAPI_CACHE`, otherwise
 `${XDG_CACHE_HOME:-~/.cache}/telegram-bot-api`. the tool chooses the newest valid cached copy
