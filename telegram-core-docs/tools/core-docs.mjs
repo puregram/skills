@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Catalogue, DEFAULT_TTL, databasePath, pageUrl, parseMarkdown, provenance } from './catalogue.mjs'
-import { preserveManagedRead, synchronizeCatalogue } from './update.mjs'
+import { acquireCatalogueLease, preserveManagedRead, synchronizeCatalogue } from './update.mjs'
 
 const HELP = `core-docs — searchable official core.telegram.org Markdown
 
@@ -93,8 +93,10 @@ async function main() {
     opts.db = result.databasePath
     if (result.error) process.stderr.write('warning: catalogue update failed (' + result.error + '); using the existing cache\n')
   }
-  const catalogue = new Catalogue(opts.db || databasePath())
+  const lease = managed ? acquireCatalogueLease() : null
+  let catalogue
   try {
+    catalogue = new Catalogue(lease?.databasePath || opts.db || databasePath())
     if (command === 'import-tracker') {
       if (args.length !== 1) throw new Error('import-tracker needs one SQLite backup path')
       const result = catalogue.importTracker(args[0])
@@ -149,7 +151,8 @@ async function main() {
       output(opts, { url: document.url, provenance: source, total: all.length, offset: opts.offset, links }, `${document.url}\n${describe(source)}\n\n` + links.map(link => `${link.text || link.url}\n${link.url}${link.cached ? ' [cached]' : ''}`).join('\n\n') + (opts.offset + links.length < all.length ? `\n[more links: --offset ${opts.offset + links.length}]` : ''))
     }
   } finally {
-    catalogue.close()
+    catalogue?.close()
+    lease?.close()
   }
 }
 

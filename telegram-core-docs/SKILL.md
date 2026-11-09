@@ -93,6 +93,9 @@ publication instead of replacing working data with silently incomplete output.
 
 Managed snapshots live under `${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs`; `current.json`
 selects a generation-specific SQLite file. An existing `catalogue.sqlite` is a legacy fallback.
+Current and previous managed snapshots are retained; older ones are removed only when no
+tool command holds a reader lease. Legacy and user-managed files are not pruned. Copy a
+snapshot outside this managed cache if you need to pin it permanently.
 `TG_CORE_DOCS_DB` or `--db <file>` selects a user-managed database and disables automatic
 replacement of that database.
 

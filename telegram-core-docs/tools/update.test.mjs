@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
 
 import { Catalogue, databasePath } from './catalogue.mjs'
-import { MANIFEST_URL, MAX_COMPRESSED_BYTES, MAX_DATABASE_BYTES, fetchPublishedCatalogue, synchronizeCatalogue, validateManifest } from './update.mjs'
+import { MANIFEST_URL, MAX_COMPRESSED_BYTES, MAX_DATABASE_BYTES, acquireCatalogueLease, fetchPublishedCatalogue, synchronizeCatalogue, validateManifest } from './update.mjs'
 
 const hash = bytes => createHash('sha256').update(bytes).digest('hex')
 const generatedAt = '2026-01-01T00:00:00.000Z'
@@ -569,15 +569,20 @@ test('a live CLI read finishing after promotion remains available in the selecte
   const cacheDir = join(f.root, 'telegram-core-docs')
   const first = await fetchPublishedCatalogue({ cacheDir, fetcher: f.remote(f.snapshot()).fetcher })
   const next = f.snapshot({ time: '2026-02-01T00:00:00.000Z', text: '# Guide\n\nNext published body.\n' })
+  const further = f.snapshot({ time: '2026-03-01T00:00:00.000Z', text: '# Guide\n\nAnother published body.\n' })
   const liveBody = '# Guide\n\nNewer live body fetched during promotion.\n'
   const preload = join(f.root, 'promote-during-read.mjs')
   writeFileSync(preload, `
 import { synchronizeCatalogue } from ${JSON.stringify(new URL('./update.mjs', import.meta.url).href)}
-const snapshot = ${JSON.stringify({ manifest: next.manifest, compressed: next.compressed.toString('base64') })}
+const snapshots = ${JSON.stringify([next, further].map(snapshot => ({ manifest: snapshot.manifest, compressed: snapshot.compressed.toString('base64') })))}
+let cursor = 0
 globalThis.fetch = async target => {
+  const snapshot = snapshots[cursor]
   if (target === ${JSON.stringify(url)}) {
-    const result = await synchronizeCatalogue({ force: true })
-    if (result.status !== 'updated') throw new Error(result.error || result.status)
+    for (; cursor < snapshots.length; cursor++) {
+      const result = await synchronizeCatalogue({ force: true })
+      if (result.status !== 'updated') throw new Error(result.error || result.status)
+    }
     return new Response(${JSON.stringify(liveBody)}, { headers: { 'content-type': 'text/markdown' } })
   }
   if (target === ${JSON.stringify(MANIFEST_URL)}) return Response.json(snapshot.manifest)
@@ -594,4 +599,28 @@ globalThis.fetch = async target => {
   const offline = spawnSync(process.execPath, [script, 'read', url, '--offline', '--json'], { encoding: 'utf8', env })
   assert.equal(offline.status, 0, offline.stderr)
   assert.equal(JSON.parse(offline.stdout).text, liveBody)
+})
+
+test('snapshot retention preserves the current and previous copies and defers deletion for active readers', async t => {
+  const f = fixture(t)
+  const first = await f.sync(f.remote(f.snapshot()))
+  const second = await f.sync({ force: true, ...f.remote(f.snapshot({ time: '2026-02-01T00:00:00.000Z', text: '# Guide\n\nSecond.\n' })) })
+  const lease = acquireCatalogueLease({ cacheDir: f.cacheDir })
+  const snapshot = f.snapshot({ time: '2026-03-01T00:00:00.000Z', text: '# Guide\n\nThird.\n' })
+  let third
+  try {
+    third = await f.sync({ force: true, ...f.remote(snapshot) })
+    assert.equal(third.status, 'updated', third.error)
+    assert.equal(existsSync(first.databasePath), true)
+    assert.equal(readDocument(lease.databasePath).body, '# Guide\n\nSecond.\n')
+  } finally { lease.close() }
+  const unrelated = join(f.cacheDir, 'user-owned.sqlite')
+  writeFileSync(unrelated, 'leave this file alone')
+  const checked = await f.sync({ force: true, ...f.remote(snapshot) })
+  assert.equal(checked.status, 'current', checked.error)
+  assert.equal(checked.prunedGenerations, 1)
+  assert.equal(existsSync(first.databasePath), false)
+  assert.equal(readDocument(second.databasePath).body, '# Guide\n\nSecond.\n')
+  assert.equal(readDocument(third.databasePath).body, '# Guide\n\nThird.\n')
+  assert.equal(readFileSync(unrelated, 'utf8'), 'leave this file alone')
 })

@@ -108,14 +108,16 @@ async function readCatalogue(opts) {
   let path = process.env.TG_CORE_DOCS_DB ||
     join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'telegram-core-docs', 'catalogue.sqlite')
   const [major, minor] = process.versions.node.split('.').map(Number)
+  let lease
   if (!process.env.TG_CORE_DOCS_DB && (major > 22 || (major === 22 && minor >= 13))) {
     const updater = new URL('../../telegram-core-docs/tools/update.mjs', import.meta.url)
     try {
       await stat(updater)
-      const { synchronizeCatalogue } = await import(updater.href)
+      const { acquireCatalogueLease, synchronizeCatalogue } = await import(updater.href)
       const result = await synchronizeCatalogue({ offline: opts.offline,
         enabled: !opts.noSync && process.env.TG_CORE_DOCS_AUTO_UPDATE !== '0' })
-      path = result.databasePath
+      lease = acquireCatalogueLease()
+      path = lease.databasePath
       if (result.error) process.stderr.write(`warning: shared catalogue update failed (${result.error}); using the existing cache\n`)
     } catch (error) {
       if (error.code !== 'ENOENT') process.stderr.write(`warning: shared catalogue updater unavailable: ${error.message}\n`)
@@ -124,6 +126,7 @@ async function readCatalogue(opts) {
   try {
     await stat(path)
   } catch (err) {
+    lease?.close()
     if (err.code === 'ENOENT') return new Map()
     process.stderr.write(`warning: cannot read shared catalogue: ${err.message}\n`)
     return new Map()
@@ -152,6 +155,7 @@ async function readCatalogue(opts) {
     return new Map()
   } finally {
     db?.close()
+    lease?.close()
   }
 }
 

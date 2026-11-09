@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { gunzipSync } from 'node:zlib'
 
@@ -16,6 +16,7 @@ const CDN_HOSTS = new Set(['release-assets.githubusercontent.com', 'objects.gith
 const digest = bytes => createHash('sha256').update(bytes).digest('hex')
 const isoTime = value => typeof value === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,3})?Z$/.test(value) && Number.isFinite(Date.parse(value))
 const cacheRoot = () => join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'telegram-core-docs')
+const GENERATION = /^catalogue-[a-f0-9]{64}-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\.sqlite$/
 
 export function validateManifest(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value) || value.schemaVersion !== 1 ||
@@ -210,7 +211,9 @@ function promote(path, cacheDir, manifest, selectedPath) {
     renameSync(path, target)
     const fd = openSync(target, 'r')
     try { fsyncSync(fd) } finally { closeSync(fd) }
-    const pointer = { schemaVersion: 1, database, installedAt: new Date().toISOString(), manifest, mergedDocuments }
+    const prior = basename(selectedPath)
+    const pointer = { schemaVersion: 1, database, previousDatabase: GENERATION.test(prior) ? prior : null,
+      installedAt: new Date().toISOString(), manifest, mergedDocuments }
     atomicJson(join(cacheDir, 'current.json'), pointer)
     return pointer
   } finally {
@@ -285,7 +288,8 @@ async function synchronize({ force = false, offline = false, fetcher = globalThi
     }
     state = { ...state, status, checkedAt: new Date().toISOString(), manifest }
     atomicJson(join(cacheDir, 'update.json'), state)
-    return result(status, { lastAttempt: state, installedAt: installed.installedAt, mergedDocuments: installed.mergedDocuments })
+    const prunedGenerations = pruneGenerations(cacheDir, installed)
+    return result(status, { lastAttempt: state, installedAt: installed.installedAt, mergedDocuments: installed.mergedDocuments, prunedGenerations })
   } catch (error) {
     const failed = { ...(state || { schemaVersion: 1, attemptedAt: new Date().toISOString() }), status: 'failed', error: error.message,
       ...(Number.isInteger(error.status) ? { httpStatus: error.status, resource: error.resource, missing: error.status === 404 && error.resource === 'manifest' } : {}) }
@@ -300,6 +304,43 @@ async function synchronize({ force = false, offline = false, fetcher = globalThi
 
 export function synchronizeCatalogue(options = {}) {
   return synchronize(options)
+}
+
+function catalogueReaderLock(cacheDir, exclusive) {
+  mkdirSync(cacheDir, { recursive: true, mode: 0o700 })
+  const db = new DatabaseSync(join(cacheDir, 'catalogue-readers.sqlite'))
+  try {
+    db.exec(`PRAGMA busy_timeout=${exclusive ? 0 : 5000}; CREATE TABLE IF NOT EXISTS readers (id INTEGER); ${exclusive ? 'BEGIN EXCLUSIVE' : 'BEGIN'}`)
+    db.prepare('SELECT id FROM readers').get()
+    return db
+  } catch (error) {
+    db.close()
+    throw error
+  }
+}
+
+export function acquireCatalogueLease({ cacheDir = cacheRoot() } = {}) {
+  const db = catalogueReaderLock(cacheDir, false)
+  return { databasePath: databasePath(cacheDir), close() { db.close() } }
+}
+
+function pruneGenerations(cacheDir, pointer) {
+  if (!pointer || !Object.hasOwn(pointer, 'previousDatabase')) return 0
+  let lock
+  try { lock = catalogueReaderLock(cacheDir, true) } catch (error) {
+    if (error.errcode === 5) return 0
+    throw error
+  }
+  try {
+    const keep = new Set([pointer.database, pointer.previousDatabase])
+    let removed = 0
+    for (const entry of readdirSync(cacheDir, { withFileTypes: true })) {
+      if (!entry.isFile() || !GENERATION.test(entry.name) || keep.has(entry.name)) continue
+      for (const suffix of ['', '-wal', '-shm', '-journal']) rmSync(join(cacheDir, entry.name) + suffix, { force: true })
+      removed++
+    }
+    return removed
+  } finally { lock.close() }
 }
 
 export function preserveManagedRead(document, previousPath, { cacheDir = cacheRoot() } = {}) {
