@@ -33,11 +33,13 @@ options:
   --json            machine-readable output
   --refresh         ignore the cache and refetch
   --offline         never touch the network; use the cache even if stale
+  --no-sync         skip optional shared-catalogue release checks
   --ttl <hours>     cache lifetime (default ${DEFAULT_TTL_HOURS})
   --brief           get: omit field / param descriptions
 
 the cache lives in $TG_BOTAPI_CACHE, else $XDG_CACHE_HOME/telegram-bot-api, else ~/.cache/telegram-bot-api.
 optional shared catalogue: $TG_CORE_DOCS_DB, else $XDG_CACHE_HOME/telegram-core-docs/catalogue.sqlite.
+the sibling telegram-core-docs skill can update that catalogue from GitHub about hourly; --offline never checks.
 shared catalogue reading needs Node >=22.13; standalone Markdown lookup needs Node >=18.
 search/refs reuse cached entry pages even when stale; --refresh refetches with at most 8 concurrent requests.
 results include source URL, SHA-256, verification/fetch timestamps and explicit freshness.
@@ -57,13 +59,14 @@ examples:
 // ---------- args ----------
 
 function parseArgs(argv) {
-  const opts = { json: false, refresh: false, offline: false, brief: false, ttl: DEFAULT_TTL_HOURS }
+  const opts = { json: false, refresh: false, offline: false, brief: false, ttl: DEFAULT_TTL_HOURS, noSync: false }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--json') opts.json = true
     else if (a === '--refresh') opts.refresh = true
     else if (a === '--offline') opts.offline = true
+    else if (a === '--no-sync') opts.noSync = true
     else if (a === '--brief') opts.brief = true
     else if (a === '--help' || a === '-h') opts.help = true
     else if (a === '--ttl') opts.ttl = Number(argv[++i])
@@ -96,14 +99,28 @@ function officialUrl(value) {
 }
 
 let cataloguePromise
-async function catalogue() {
-  if (!cataloguePromise) cataloguePromise = readCatalogue()
+async function catalogue(opts) {
+  if (!cataloguePromise) cataloguePromise = readCatalogue(opts)
   return cataloguePromise
 }
 
-async function readCatalogue() {
-  const path = process.env.TG_CORE_DOCS_DB ||
+async function readCatalogue(opts) {
+  let path = process.env.TG_CORE_DOCS_DB ||
     join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'telegram-core-docs', 'catalogue.sqlite')
+  const [major, minor] = process.versions.node.split('.').map(Number)
+  if (!process.env.TG_CORE_DOCS_DB && (major > 22 || (major === 22 && minor >= 13))) {
+    const updater = new URL('../../telegram-core-docs/tools/update.mjs', import.meta.url)
+    try {
+      await stat(updater)
+      const { synchronizeCatalogue } = await import(updater.href)
+      const result = await synchronizeCatalogue({ offline: opts.offline,
+        enabled: !opts.noSync && process.env.TG_CORE_DOCS_AUTO_UPDATE !== '0' })
+      path = result.databasePath
+      if (result.error) process.stderr.write(`warning: shared catalogue update failed (${result.error}); using the existing cache\n`)
+    } catch (error) {
+      if (error.code !== 'ENOENT') process.stderr.write(`warning: shared catalogue updater unavailable: ${error.message}\n`)
+    }
+  }
   try {
     await stat(path)
   } catch (err) {
@@ -167,7 +184,7 @@ async function cachedPage(url, opts) {
       legacy.storedAt = Date.parse(legacy.provenance.checkedAt || legacy.provenance.fetchedAt) || st.mtimeMs
     }
   } catch {}
-  const shared = (await catalogue()).get(url)
+  const shared = (await catalogue(opts)).get(url)
   const newest = legacy && (!shared || legacy.storedAt >= shared.storedAt) ? legacy : shared
   return newest ? documentWithFreshness(newest, opts) : null
 }
@@ -303,7 +320,7 @@ function parseFeatures(markdown) {
 
 async function loadApi(opts, full = false) {
   const sources = ['api', 'types', 'rich', 'changelog']
-  const documents = await catalogue()
+  const documents = await catalogue(opts)
   const pages = await Promise.all(sources.map(async (key) => {
     if (opts.offline) return cachedPage(PAGES[key], opts)
     return loadPage(key, opts)

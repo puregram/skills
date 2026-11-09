@@ -1,15 +1,32 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
+import { lstatSync, mkdirSync, readFileSync, realpathSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 export const ORIGIN = 'https://core.telegram.org'
 export const DEFAULT_TTL = 6
 const MAX_BODY = 8 * 1024 * 1024
 
-export function databasePath() {
-  return process.env.TG_CORE_DOCS_DB || join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'telegram-core-docs', 'catalogue.sqlite')
+export function databasePath(cacheDir = join(process.env.XDG_CACHE_HOME || join(homedir(), '.cache'), 'telegram-core-docs'), { ignoreOverride = false } = {}) {
+  if (!ignoreOverride && process.env.TG_CORE_DOCS_DB) return process.env.TG_CORE_DOCS_DB
+  try {
+    const pointerFile = join(cacheDir, 'current.json')
+    if (lstatSync(pointerFile).size > 64 * 1024) throw new Error('invalid catalogue pointer')
+    const pointer = JSON.parse(readFileSync(pointerFile, 'utf8'))
+    const manifest = pointer.manifest
+    if (pointer.schemaVersion !== 1 || !/^[0-9a-f]{64}$/.test(manifest?.sha256) ||
+      manifest.schemaVersion !== 1 || manifest.repository !== 'puregram/skills' ||
+      manifest.source !== ORIGIN + '/' || manifest.complete !== true ||
+      !Number.isFinite(Date.parse(manifest.generatedAt)) ||
+      typeof pointer.database !== 'string' ||
+      !new RegExp(`^catalogue-${manifest.sha256}-[0-9a-f-]{36}\\.sqlite$`).test(pointer.database)) throw new Error('invalid catalogue pointer')
+    const path = join(cacheDir, pointer.database)
+    if (!lstatSync(path).isFile() || dirname(realpathSync(path)) !== realpathSync(resolve(cacheDir))) throw new Error('invalid catalogue generation')
+    return path
+  } catch {
+    return join(cacheDir, 'catalogue.sqlite')
+  }
 }
 
 export function canonicalUrl(input, base = ORIGIN + '/') {

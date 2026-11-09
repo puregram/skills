@@ -1,19 +1,21 @@
 #!/usr/bin/env node
 
 import { Catalogue, DEFAULT_TTL, databasePath, pageUrl, parseMarkdown, provenance } from './catalogue.mjs'
+import { synchronizeCatalogue } from './update.mjs'
 
 const HELP = `core-docs — searchable official core.telegram.org Markdown
 
 usage:
   core-docs.mjs import-tracker <sqlite-backup>   seed/update the catalogue from a read-only tracker snapshot
-  core-docs.mjs search <words...>               ranked section-level full-text search, no network
+  core-docs.mjs sync                           check and install the latest published catalogue
+  core-docs.mjs search <words...>               ranked local section-level full-text search
   core-docs.mjs read <path-or-url>              read a page or --section; fetch only this page if needed
   core-docs.mjs sections <path-or-url>          list heading anchors and source line ranges
   core-docs.mjs links <path-or-url>             related official Markdown links
   core-docs.mjs stats                          catalogue coverage and import freshness
 
 options:
-  --db <file>           catalogue path (default $TG_CORE_DOCS_DB or ~/.cache/telegram-core-docs/catalogue.sqlite)
+  --db <file>           user-managed catalogue (never automatically updated)
   --area <name>         search: all, bot-api, bots (includes bot-api), mtproto, tdlib, gateway, other
   --limit <N>           search/sections/links results, 1–100 (default 20)
   --offset <N>          search/sections/links pagination, zero-based (default 0)
@@ -21,24 +23,26 @@ options:
   --line <N>           read from this absolute source line, one-based
   --max-lines <N>      maximum source lines to print, 1–100000 (default 200)
   --offline            read cached pages only; never use the network
+  --no-sync            skip automatic release checks (also $TG_CORE_DOCS_AUTO_UPDATE=0)
   --refresh            revalidate this page even when fresh (not for search)
   --ttl <hours>        freshness threshold (default ${DEFAULT_TTL})
   --json               machine-readable output, including provenance
 
 Node >=22.13; no install or npm dependencies. Only official HTTPS Markdown pages are fetched.
-Search covers the imported/cached corpus, not unlinked or undiscovered pages. Refreshing one
-page does not rediscover the site. Repeat import-tracker to update the full inventory.
-No revision-history or changes-since command: the tracker stores latest bodies only.
+Default-cache lookups check the GitHub release about hourly, retaining the last good catalogue.
+Search covers the installed/cached corpus, not unlinked or undiscovered pages. Refreshing one
+page does not rediscover the site. Use sync to force a release check.
 `
 
 function parseArgs(argv) {
-  const opts = { db: databasePath(), area: 'all', limit: 20, offset: 0, maxLines: 200, ttl: DEFAULT_TTL, json: false, offline: false, refresh: false }
+  const opts = { area: 'all', limit: 20, offset: 0, maxLines: 200, ttl: DEFAULT_TTL, json: false, offline: false, refresh: false, noSync: false }
   const rest = []
   const values = { '--db': 'db', '--area': 'area', '--limit': 'limit', '--offset': 'offset', '--section': 'section', '--line': 'line', '--max-lines': 'maxLines', '--ttl': 'ttl' }
   for (let index = 0; index < argv.length; index++) {
     const arg = argv[index]
     if (arg === '--json') opts.json = true
     else if (arg === '--offline') opts.offline = true
+    else if (arg === '--no-sync') opts.noSync = true
     else if (arg === '--refresh') opts.refresh = true
     else if (arg === '--help' || arg === '-h') opts.help = true
     else if (values[arg]) {
@@ -72,9 +76,23 @@ async function main() {
     process.stdout.write(HELP)
     return
   }
-  if (!['import-tracker', 'search', 'read', 'sections', 'links', 'stats'].includes(command)) throw new Error('unknown command: ' + command)
-  if (command === 'search' && opts.refresh) throw new Error('search is local; use read --refresh to revalidate a page or import-tracker to update the corpus')
-  const catalogue = new Catalogue(opts.db)
+  if (!['sync', 'import-tracker', 'search', 'read', 'sections', 'links', 'stats'].includes(command)) throw new Error('unknown command: ' + command)
+  if (command === 'sync') {
+    if (args.length) throw new Error('sync does not take arguments')
+    if (opts.noSync) throw new Error('sync and --no-sync cannot be combined')
+    const result = await synchronizeCatalogue({ force: true, offline: opts.offline, db: opts.db })
+    output(opts, result, `${result.status}${result.error ? ': ' + result.error : ''}\ndatabase: ${result.databasePath}\ngenerated: ${result.manifest?.generatedAt || 'unknown'}`)
+    if (result.status === 'failed') process.exitCode = 1
+    return
+  }
+  if (command === 'search' && opts.refresh) throw new Error('search is local; use read --refresh to revalidate a page or sync to update the corpus')
+  if (command !== 'import-tracker') {
+    const result = await synchronizeCatalogue({ offline: opts.offline, db: opts.db,
+      enabled: !opts.noSync && process.env.TG_CORE_DOCS_AUTO_UPDATE !== '0' })
+    opts.db = result.databasePath
+    if (result.error) process.stderr.write('warning: catalogue update failed (' + result.error + '); using the existing cache\n')
+  }
+  const catalogue = new Catalogue(opts.db || databasePath())
   try {
     if (command === 'import-tracker') {
       if (args.length !== 1) throw new Error('import-tracker needs one SQLite backup path')
@@ -91,7 +109,7 @@ async function main() {
     }
     if (command === 'search') {
       if (!args.length) throw new Error('search needs words or a symbol name')
-      if (!catalogue.stats().documents) throw new Error('catalogue is empty; import-tracker first, or read a known URL online')
+      if (!catalogue.stats().documents) throw new Error('catalogue is empty; run sync, import-tracker, or read a known URL online')
       const results = catalogue.search(args.join(' '), opts)
       const text = results.length ? results.map(result => `${result.title} › ${result.heading}\n${result.url} (line ${result.line})\n${describe(result.provenance)}\n${result.excerpt}`).join('\n\n') : 'no matches in the cached corpus'
       output(opts, { query: args.join(' '), area: opts.area, offset: opts.offset, results }, text)
