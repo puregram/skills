@@ -190,6 +190,11 @@ These are application fields **inside** answer data, not the Bot API response en
 both if restricting `allowed_updates`. Each carries `id`, `from`, `data`, `type`; handle the
 `type.type` discriminator (`data`, `sent_transaction`, `sign_data`), not just the string data.
 
+For any request or wallet implementation, check the [limits reference](references/limits-and-profile.md)
+for request and answer UTF-8 sizes, the aggregate per-user/bot rate, the shared in-flight
+slot, answer deadline and gesture/fresh-answer authorization window. A correct transaction
+sequence still fails when these independent budgets are exceeded.
+
 For `type.type == "data"` and `data == "add"`:
 
 1. Use authenticated `from.id` and the server-provided `widget_id`; reject unknown actions,

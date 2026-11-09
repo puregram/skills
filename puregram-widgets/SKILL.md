@@ -126,7 +126,6 @@ W.onEvent('chatDataChanged', draw); draw();
 })
 
 export const budget = Card.html.check()
-// Inspect budget.problems, including warnings even when budget.ok is true.
 Card.html.assertFits()
 export const inputContent = Card.content({ chat: { count: 0 }, caption: 'Counter' })
 ```
@@ -262,7 +261,7 @@ is for the test-server-only inline workflow until availability changes.
 | Failure | Handling |
 |---|---|
 | `WidgetHtmlContextError` | Fix the interpolation context; `.context` explains where. |
-| `WidgetTooLargeError` | Inspect `.check.problems`; reduce source/assets or fix empty/NUL HTML. |
+| `WidgetTooLargeError` | Inspect `.check().problems`; reduce source/assets or fix empty/NUL HTML. |
 | `WidgetStateTooLargeError` | Inspect `.bytes` / `.limit`; reduce serialized state. |
 | `WidgetQueryDataTooLargeError` | Inspect `.data` / `.bytes`; shorten routing payload. |
 | `TypeError`, `RangeError`, JSON parse/serialization errors | Fix invalid prefixes, codecs, data, targets or cache options; don't silence them. |
@@ -312,7 +311,7 @@ export async function updateScore(tg: Telegram, widgetId: string, score: number)
 }
 
 export async function clearSelection(tg: Telegram, target: WidgetMessageRef) {
-  return Score.editState(tg, target, { chat: null }) // leaves public untouched
+  return Score.editState(tg, target, { chat: null })
 }
 
 export async function reuseScore(tg: Telegram, chatId: number | string, widgetId: string) {
@@ -321,7 +320,6 @@ export async function reuseScore(tg: Telegram, chatId: number | string, widgetId
   })
 }
 
-// Local construction only; using this result in inline mode is test-server-only.
 export function sharedInlineResult(widgetId: string) {
   return InlineQueryResult.article({
     id: 'score', title: 'Shared score',

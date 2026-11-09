@@ -5,19 +5,39 @@
       "id": 1,
       "prompt": "Review this proposed Mini App login design, then give library-agnostic corrected backend pseudocode: the frontend POSTs Telegram.WebApp.initDataUnsafe.user and auth_date, plus a validated=true flag. Our backend rebuilds JSON, sorts the known fields and deletes both hash and signature for every verification mode. We own the bot and use HMAC; an external partner should also verify logins but must not get our bot token. Explain exactly which bytes each verifier signs, what happens to signature in the HMAC path, and how to reject stale or replayed actions without pretending Telegram mandates our chosen login TTL.",
       "expected_output": "Reject client-side identity and validation flags; receive raw initData and fail closed on invalid proof. Describe one-time query decoding, original nested JSON strings, retention of unknown fields, ordinal key sorting and LF joining. HMAC excludes hash only, retains signature when present, derives binary secret using key WebAppData and data bot token, then HMACs canonical data with that secret and compares securely. Third-party Ed25519 excludes both hash and signature, prefixes expected_bot_id:WebAppData plus LF, decodes base64url signature and uses Telegram's configured environment public key without a token. Validate signed auth_date with an explicit application freshness/future-skew policy, establish bound sessions, and prevent duplicated state changes with atomic action-level idempotency/nonces; do not invent a universal TTL or declare all legitimate init-data requests single-use. Cite official validation sources.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Rejects initDataUnsafe/user/validated flags as authentication and obtains original raw initData for fail-closed backend verification.",
+        "Decodes query data once, preserves original nested JSON value strings and future fields, sorts keys ordinally, and joins canonical pairs with LF.",
+        "Uses HMAC with only hash excluded (signature retained), binary HMAC(WebAppData, bot token) derivation and secure comparison rather than the Login Widget derivation.",
+        "Uses third-party Ed25519 without revealing a token: excludes hash and signature, prefixes expected bot id:WebAppData plus LF, and selects Telegram environment public keys.",
+        "Separates signed auth_date checking and application freshness policy from replay-safe action/session handling; does not invent a universal TTL or universally single-use init data."
+      ]
     },
     {
       "id": 2,
       "prompt": "I'm shipping the same Telegram Mini App from a reply-keyboard web_app button, an inline-keyboard web_app button, the inline-results Switch to Mini App button, and a named-app startapp link in a group. Can I always call sendData with a 4096-character JSON blob and then answerWebAppQuery using chat_instance? Build a launch-context decision table and a correct save/share flow for each. Also explain how shareMessage differs from sending an ordinary message_id, and whether empty initData means I should trust a user_id in my URL instead.",
       "expected_output": "Separate the four contexts: reply-keyboard launches have empty init data and use a single sendData return of at most 4096 bytes; inline-keyboard web apps are private user-bot only and can use backend answerWebAppQuery with a verified query_id; inline-results launches have empty init data and return through inline mode with active user selection; named direct links supply optional signed user/context and do not confer chat read/send access. chat_instance is not a query ID or Bot API chat ID. Explain authenticated backend persistence independently from chat publishing; validate arbitrary WebAppData rather than treating payload user IDs as identity. For supported prepared sharing, obtain savePreparedInlineMessage for the verified target user and intended allowed chat types, respect expiration_date and pass its prepared id to shareMessage's user dialog. Never fall back to unsigned URL identity. Cite launch and API contracts.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Separates all four requested launch contexts rather than granting sendData/answerWebAppQuery to every launch.",
+        "Uses at most 4096 UTF-8 bytes for the keyboard return path, not 4096 arbitrary characters, and does not substitute chat_instance for query_id or a chat id.",
+        "Explains empty-init-data launches without trusting URL user ids or inventing authenticated identity.",
+        "Uses authenticated backend persistence and valid user-mediated publication; prepared sharing obtains a prepared id for the verified user and handles expiration/cancellation rather than passing an ordinary message id."
+      ]
     },
     {
       "id": 3,
       "prompt": "Our Mini App must work on older Telegram clients and desktop/web as well as phones. A teammate calls requestFullscreen, SecureStorage and LocationManager immediately, reads the clipboard on load, pins the footer to viewportHeight, stores the bot token in SecureStorage, and unlocks digital content whenever openInvoice's callback says paid. Please turn this into a safe lifecycle/capability plan with documented version gates and storage limits, denied/unsupported cases, a correct payment handoff, and a distinction between expand and fullscreen. Don't assume that a function existing in telegram-web-app.js proves native client support.",
       "expected_output": "Keep bot token exclusively backend-side and verify initData before identity use. Initialize essential UI and ready early; subscribe and clean up handlers, adapt theme, use viewportStableHeight and both safe-area types, distinguish expand from 8.0 fullscreen. Gate documented APIs by bridge version and actual presence then handle native unsupported/error/permission states: 8.0 LocationManager init/capability checks/null denial, 9.0 SecureStorage, and constrained user-gesture clipboard access rather than on-load reads. State sourced CloudStorage limits (1024 keys, key 1-128 restricted characters, values 0-4096 characters), DeviceStorage 5 MB, SecureStorage 10 items without inventing per-item limits or universal desktop availability. Explain denial-safe storage behavior without plaintext secret fallback. Hand off payments to telegram-payments, require XTR for digital goods and genuine backend successful_payment/idempotent fulfillment rather than a browser callback. Cite official capability and payment contracts.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Keeps bot tokens on the backend and fulfills purchases only from authoritative successful_payment evidence, not a frontend paid callback.",
+        "Initializes UI/ready and theme/lifecycle handlers appropriately, uses stable viewport height and both safe-area types, and distinguishes expand from fullscreen.",
+        "Gates actual client capabilities and handles denial/unsupported states; correctly identifies 8.0 fullscreen/location and 9.0 secure storage rather than relying only on function existence.",
+        "Uses sourced storage limits (CloudStorage 1024 keys, key length1-128/value0-4096 characters; DeviceStorage5MB; SecureStorage10 items) without inventing secure per-item or desktop guarantees.",
+        "Requires eligible gesture/context for clipboard and permission/device checks for location rather than invoking everything on load."
+      ]
     }
   ]
 }

@@ -5,19 +5,38 @@
       "id": 1,
       "prompt": "I'm implementing a Telegram shop in Python. We sell shipped art prints priced in JPY and BHD, plus a downloadable art pack. Our current checkout handler grants the pack as soon as answerPreCheckoutQuery(ok=True) returns. Please propose the correct library-neutral order flow and representative API payload shapes, including flexible shipping and tips for the prints. Can we reuse our card provider for the download? Explain how to obtain current currency minimums/maximums without hardcoding a table, how forwarded invoices affect buyer identity, and what to do if the success update arrives twice. Do not make any API calls or use credentials.",
       "expected_output": "Separates physical provider/fiat from digital XTR-only sales; looks up current exponent/min/max metadata, not universal cents; XTR whole Stars with one price and no shipping/tips. Corrects fulfillment to verified message.successful_payment and persists distinct charge identifiers. Explains flexible shipping query/options and bounded pre-checkout validation, cites the exact 10-second method deadline with transport latency, does not invent a shipping deadline. Validates authoritative totals/payer, handles shared offers and deduplicates success by charge rather than payload alone. No real execution.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Separates provider/fiat physical goods from XTR-only digital goods and handles JPY/BHD currency exponents plus live currency min/max metadata instead of universal cents.",
+        "Uses whole Stars, exactly one XTR price and no fiat shipping/tips assumptions for digital goods; does not route the download through card checkout.",
+        "Handles flexible shipping and authoritative pre-checkout validation, with a 10-second answer deadline accounting for transport rather than an invented shipping deadline.",
+        "Fulfills only after genuine successful_payment, validates authoritative totals/payer identity including shared invoices, stores distinct charge ids and deduplicates payment success durably."
+      ]
     },
     {
       "id": 2,
-      "prompt": "Design the backend lifecycle for a monthly Stars subscription sold from a Telegram Mini App. A user may buy two separate subscriptions. I'd like to use sendInvoice with a seven-day subscription_period; if they cancel, immediately revoke access and refund the last payment automatically. Show what needs correcting, the supported creation/control methods, stored identifiers, recurring-success handling, expiration and how the Mini App should find out the real payment result. Also distinguish native paid channel invite links. No live bot or payment operations.",
-      "expected_output": "Uses createInvoiceLink for bot subscriptions with XTR, one price, current 2592000-second period and at most 10000 Stars, with exact source citations; rejects invented sendInvoice subscription parameter and weekly period. Models multiple subscriptions per user and individual charges, uses recurring flags/authoritative expiration without double extension. Cancellation controls future extension, keeps paid access through the current period, does not imply refund; false only allows user re-enable. Refund is a separate authorized Stars-charge operation. Mini App openInvoice/invoiceClosed is UX, not fulfillment evidence, and points to telegram-mini-apps. Distinguishes channel subscription link permissions, channel balance, and link edits/revocation from bot subscription cancellation/refunds.",
-      "files": []
+      "prompt": "Design the backend lifecycle for a monthly Stars subscription sold from a Telegram Mini App. A user may buy two separate subscriptions. I'd like to use sendInvoice with a seven-day subscription_period; if they cancel, immediately revoke access and refund the last payment automatically. Show what needs correcting, the supported creation/control methods, stored identifiers, recurring-success handling, expiration and how the Mini App should find out the real payment result. Also distinguish native paid channel invite links. No live bot or payment operations. Include the actual Bot API subscription-state notifications and explain correlation when a user has several subscriptions.",
+      "expected_output": "Uses createInvoiceLink for bot subscriptions with XTR, one price, current 2592000-second period and at most 10000 Stars, with exact source citations; rejects invented sendInvoice subscription parameter and weekly period. Models multiple subscriptions per user and individual charges, uses recurring flags/authoritative expiration without double extension. Cancellation controls future extension, keeps paid access through the current period, does not imply refund; false only allows user re-enable. Refund is a separate authorized Stars-charge operation. Mini App openInvoice/invoiceClosed is UX, not fulfillment evidence, and points to telegram-mini-apps. Distinguishes channel subscription link permissions, channel balance, and link edits/revocation from bot subscription cancellation/refunds. Handles Update.subscription/BotSubscriptionUpdated with user, invoice_payload and canceled/active/failed state. Does not invent a charge/subscription identifier in that update or grant paid time from active alone; acknowledges ambiguous correlations.",
+      "files": [],
+      "expectations": [
+        "Uses createInvoiceLink for recurring XTR invoices, the supported 2592000-second period and subscription price cap10000 Stars, not a weekly sendInvoice subscription parameter.",
+        "Models multiple subscriptions per user, first/recurring charges and authoritative expiration; duplicate updates cannot double-extend entitlement.",
+        "Separates cancellation of future extension, paid-period access and separately authorized refunds; does not treat is_canceled:false as a forced renewal.",
+        "Uses backend payment evidence rather than Mini App callback fulfillment and distinguishes paid channel invite subscriptions from bot invoice subscriptions.",
+        "Processes Update.subscription/BotSubscriptionUpdated with user, invoice_payload and canceled/active/failed states; active is not payment evidence. Does not invent charge/subscription IDs in the update or arbitrarily map ambiguous same-user/payload records."
+      ]
     },
     {
       "id": 3,
       "prompt": "Help reconcile a Telegram bot's purchase ledger after a timeout. We have a Stars sale and an outgoing refund with the same StarTransaction.id, a gift purchase and a paid-broadcast debit. The current importer deduplicates all rows by id and treats every incoming amount as a paid order. We also need to refund a fiat print order: is refundStarPayment(user_id, provider_payment_charge_id, amount) correct? Give a safe reconciliation/refund plan, transaction pagination and exact identifier/unit rules. Include ambiguous refund responses and later chargebacks, but don't run any operations.",
       "expected_output": "Rejects the proposed refund signature: refundStarPayment takes payer user_id and Telegram charge ID, only successful Stars payments, no partial amount; fiat refunds are provider-side. Preserves same-ID original/refund ledger events using direction/kind, classifies transaction partners and does not fulfill gifts/debits/refunds. Gives chronological offset pagination with 1–100/default100 and cites method; matches incoming invoice transaction IDs to SuccessfulPayment Telegram charge, keeps whole Stars/nanostar ledger components distinct from invoice units. Records unknown timeout results and reconciles instead of assuming failure or blindly refunding again. Acknowledges chargeback/balance reversals and no universal payment-status guarantee. No real operations.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Corrects Stars refunds to payer user id plus Telegram payment charge id, no partial amount; fiat refunds go through the provider.",
+        "Preserves original and refund entries that share an id using direction/kind, and does not classify gifts, broadcast debits or every incoming amount as order payment.",
+        "Uses chronological offset pagination with limit1-100/default100 and keeps invoice Stars distinct from fractional/nanostar ledger components.",
+        "Records ambiguous outcomes and reconciles before repeating irreversible actions; acknowledges later chargebacks and does not invent a universal payment-status endpoint."
+      ]
     }
   ]
 }

@@ -48,13 +48,28 @@ Renewal is automatic in Telegram according to the
 implement a second charge loop, or require a fresh interactive checkout approval as proof
 of every automatic renewal. Only extend access when payment evidence supports it.
 
-The subscriber can cancel renewal; insufficient Stars can prevent renewal. These states
-are described in the [client/protocol management guide](https://core.telegram.org/api/subscriptions#managing-subscriptions).
-Do not invent Bot API cancellation/failed-renewal update fields or a Bot API method named
-`getStarsSubscriptions`: the similarly named documented listing operations belong to
-MTProto. Keep paid-through state and reconcile known charges; absent renewal is not a
-reason to keep granting unpaid future periods. Any merchant grace period is explicitly
-merchant policy, not Telegram-guaranteed paid access.
+The subscriber can cancel renewal; insufficient Stars can prevent renewal. Handle the
+documented [`Update.subscription`](https://core.telegram.org/bots/api/types/update.md)
+notification, whose [`BotSubscriptionUpdated`](https://core.telegram.org/bots/api/types/botsubscriptionupdated.md)
+contains `user`, `invoice_payload` and `state`:
+
+| state | meaning | entitlement handling |
+|---|---|---|
+| `canceled` | the user canceled the subscription | stop expecting extension; preserve the already-paid period |
+| `active` | the user re-enabled a previously canceled subscription | update renewal status, but do not treat it as a new successful payment |
+| `failed` | payment for the subscription failed | record the failed renewal; do not grant an unpaid future period |
+
+Include `subscription` in an explicit `allowed_updates` list when consuming these events.
+Correlate the verified user and invoice payload with your purchase records. The update
+does **not** contain a charge ID or a separate subscription ID. If that pair matches
+multiple subscriptions, do not invent an identifier or arbitrarily revoke all access;
+use an explicit merchant correlation/reconciliation policy. Unique purchase-intent
+payloads and deliberate invoice-reuse rules can make that policy unambiguous.
+
+Payment success and its expiration remain the evidence for a paid period. Any merchant
+grace period is policy, not Telegram-guaranteed paid access. Do not invent a Bot API
+method named `getStarsSubscriptions`: the similarly named documented listing operations
+belong to [MTProto](https://core.telegram.org/api/subscriptions#managing-subscriptions).
 
 ### cancel extension vs refund a charge
 

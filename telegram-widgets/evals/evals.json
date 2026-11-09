@@ -5,19 +5,38 @@
       "id": 1,
       "prompt": "I'm writing a bot without an SDK. I have a 29 KB UTF-8 HTML widget and gzip -9 says 4102 bytes. I was going to base64 the gzip into sendWidget.html, with a JSON chat_data containing 700 Cyrillic letters. Please show the correct wire payload/preparation and a tiny HTML counter that renders initial state and updates after a query. Also explain how I can deploy a new HTML layout to the message later. No actual Telegram calls, just implementation guidance.",
       "expected_output": "Use plain source HTML String in sendWidget, JSON encode correctly; measure raw UTF-8 and RFC1950 zlib level9, not gzip/raw DEFLATE/base64, with official Python accounting and headroom rather than deriving acceptance from gzip size. State has its own 1024 UTF-8-byte limit so the Cyrillic example exceeds it. Give self-contained profile-compatible HTML and raw/language-neutral API flow, answer every query within 15 seconds, distinguish reply data from persistent edits and handle events/errors. Explain immutable HTML needs a newly sent widget, not a fabricated source-edit method. Supply a meaningful caption and current private-only production availability.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Submits plain HTML in sendWidget.html, not gzip, raw DEFLATE, base64 or an attachment; measures UTF-8 source and RFC1950 zlib level9 separately with the 32768/4096 byte ceilings, without inferring exact acceptance from gzip size.",
+        "Rejects the 700-Cyrillic-character chat state because its UTF-8 encoding exceeds the independent 1024-byte limit.",
+        "Keeps initial rendering, state-change events and query answers distinct from persistent bot-side edits, with the 15-second answer deadline.",
+        "Explains that sent HTML is immutable and a different layout needs a new widget; supplies a caption and respects current private-only production availability."
+      ]
     },
     {
       "id": 2,
       "prompt": "Design one live voting widget that everyone can send from inline results, forward into a channel, and use as a guest-bot reply. I planned to return html with is_shared:true on every inline result, save the widget id from a production bot, reuse it from a different test bot, and key votes by the forwarded chat_id. Can you correct the lifecycle and request handlers, including what works now in production versus the test server, without assuming SDK helpers or making network calls?",
       "expected_output": "Explain private-only protected production messages and test-only groups/inline/forwards, no direct/channel-inline posting, required group permission, no copies. Create shared object once via sendWidget, use returned opaque widget.id with sendSharedWidget/InputSharedWidgetMessageContent for the creating bot, not invent portability or file ids. New html+is_shared inline sends create separate objects. Explain static snapshots vs live shared forwards, no forwarded chat data/location, authenticated shared_widget_query with widget_id/from/data/type and answerWidgetQuery; original direct vs inline coordinates. Use widget_id/from.id for per-user votes; watchPublicData/cache_time and revisions, coalesced edit limits. Treat guest support as undocumented rather than deriving support or a universal prohibition from the result union. No real sends.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Distinguishes protected private-only production widgets from test-environment inline/group/forward behavior, and does not claim guest support without evidence.",
+        "Creates a shared object once and reuses its opaque returned widget id through the creating bot; does not promise cross-bot/test-server portability or treat new HTML per inline send as the same shared object.",
+        "Uses authenticated query sender plus widget id and both query kinds; does not invent forwarded chat/message coordinates or trust client-supplied identity.",
+        "Separates answer data from persistent public/chat state, handles live shared refresh/revisions, and queues/coalesces mutations instead of issuing unrestricted edits per tap."
+      ]
     },
     {
       "id": 3,
       "prompt": "Audit this proposed embedded widget checkout: it loads a CDN chart and remote logo, fetches an order from our backend, uses an input for quantity and a vertically draggable product list, and dims 20 cards with opacity:.5. Its click handler awaits a Promise before request('pay', {wallet:true}); then it uses the profile wallet as transaction.from, marks paid on msg_hash, and retries the payment after TIMEOUT. What should replace these assumptions? Include theme/time-corner handling, wallet decline/null cases, and how you'd test it without doing a real payment.",
       "expected_output": "Identify offline QuickJS/profile-1 sandbox, no CDN/network/external images/form input/vertical scrolling; use inline SVG or supported data images, buttons/horizontal controls, bot-mediated data, and hint colors instead of exceeding 16-heavy/2-backdrop quotas. Explain synchronous real-tap activation, one request/wallet in-flight, query/answer byte/rate/deadline limits and errors. Gate nullable wallet, get fresh transaction from bot, allow one wallet call within 10 seconds of tapped-answer authorization, omit from because device wallet can differ from profile card, verify on-chain sender/recipients/amounts/outcome rather than hash, reconcile timeout without blind repeat and handle REJECTED/BAD_REQUEST. Use theme tokens and dynamic time safe area rather than fixed browser values, meaningful caption/fallback, feature detection/lifecycle. Propose authorized test-server and UI/mock-only checks while noting browser mocks do not validate profile or payments; execute nothing consequential.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Rejects CDN/network/remote-image/form-input/vertical-scroll assumptions for the QuickJS widget profile and offers supported self-contained alternatives within heavy-element quotas.",
+        "Preserves synchronous tap authorization, one in-flight request/wallet operation and request rate/size/deadline boundaries rather than awaiting a Promise before the privileged call.",
+        "Treats wallet availability as nullable, does not force the profile wallet as transaction.from, and uses the limited fresh-answer authorization correctly.",
+        "Does not treat msg_hash or a timeout as settlement proof; validates on-chain outcomes and reconciles ambiguous results without blindly repeating payments.",
+        "Uses theme/time-safe-area and realistic context/lifecycle testing, without claiming browser previews enforce Telegram limits or executing a payment."
+      ]
     }
   ]
 }

@@ -5,19 +5,37 @@
       "id": 1,
       "prompt": "Using @puregram/widgets 3.0.0, make a typed per-message widget template for a product label supplied by a user. The label may contain quotes and </script>. Show it in HTML and embed the same value in script safely. The mutable stock count must come from chat state and redraw on updates, not be baked into the label template. Include an offline preflight function and a send helper taking a Telegram client and chat ID; do not start a bot or send anything while demonstrating.",
       "expected_output": "Uses actual defineWidget/html/js/json exports, a template .render(args), safe text/quoted attribute interpolation and js(value) as an unquoted expression; chatData state rendering with initial draw and chatDataChanged. Calls check/assertFits or content offline, exposes a typed send helper without invoking it, sends plain HTML through definition support, does not claim a source pin proves npm installation. No raw(userInput), guessed helper names or live requests.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Uses real @puregram/widgets exports and a defineWidget HTML template rendered with .render(args), not invented constructors or tg.widgets methods.",
+        "Escapes the hostile label in HTML and uses js(value) as an unquoted JavaScript expression; never passes user input to raw().",
+        "Reads mutable stock from chatData with initial draw and chatDataChanged handling instead of baking mutable values into immutable source.",
+        "Provides offline preflight and a typed send helper without invoking transport or real sends, preserving plain-HTML wire submission."
+      ]
     },
     {
       "id": 2,
       "prompt": "I have a shared widget with public tally state. Write puregram v3 routing for vote:0 and vote:1 from both original messages and forwarded shared widgets. Explain how to keep authoritative state, validate the sender/action and query type, edit the shared public state, answer the request, and avoid racing votes. We already have storage and a serialization queue, so describe their integration contracts rather than invent a database. Should widgets({autoAnswer:true}) replace explicit answers or retry an answer that failed? Do not run a bot.",
       "expected_output": "Uses queryData('vote') with onWidgetQuery and onSharedWidgetQuery and narrowed payload string; validates data query subtype, exact action, authorization and widget ownership against application storage. Uses editShared(tg, widgetId, value) for both shared flows; does not pass SharedWidgetQueryUpdate to editState or decode state from query. Explains queued/coalesced authoritative mutation after successful API edit, server cadence via telegram-widgets, explicit query.answer data versus separate state changes, plugin fallback timing and call-attempt tracking (failed explicit answer is not retried). No duplicated server limit table or unsupported production forwarding claim.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Routes both widget_query and shared_widget_query using real puregram APIs and exact vote payload validation rather than confusing them with callback_query.",
+        "Validates data query subtype, sender authorization and widget ownership against authoritative application state; does not decode current state from a query or editState a shared forwarded query.",
+        "Edits shared public state by widget id and integrates serialization/coalescing/storage without claiming an atomic transaction across Telegram and a database.",
+        "Answers the query explicitly and separately from state edits; correctly explains that autoAnswer is a post-dispatch fallback and does not retry a failed explicit answer attempt."
+      ]
     },
     {
       "id": 3,
       "prompt": "Review this @puregram/widgets approach: I gzip my HTML then base64 it into tg.api.sendWidget, interpolate user CSS with raw(), and call Counter.editState(tg, query, {chat:undefined}) to clear it. I also want to reuse a shared widget in another message and create an inline article for test-server QA. Give corrected compact code using real SDK APIs and explain which failures are local synchronous throws versus API errors. No real API calls.",
       "expected_output": "Corrects wire format to plain HTML and describes cached pako zlib preflight as accounting only; raw is trusted-source escape hatch and untrusted CSS needs validation or redesign. Uses null to clear and undefined to omit, sendShared for existing widget with per-message chat state, sharedContent/content via InlineQueryResult.article content option for test-server inline QA. Differentiates WidgetHtmlContextError/WidgetTooLargeError/state/query size exceptions and JSON/TypeError/RangeError from server errors, puts helper invocation inside try, notes editState false only for not-modified errors, and links protocol skill for server restrictions.",
-      "files": []
+      "files": [],
+      "expectations": [
+        "Corrects compressed/base64 wire payloads to plain HTML, with zlib preflight for accounting only, and treats raw() as trusted-input-only.",
+        "Uses null to clear state and undefined to omit a key; preserves the distinction between shared public state and per-message chat state.",
+        "Reuses existing shared objects with real helpers and constructs test-only inline content via the actual article options-object factory rather than guessed methods.",
+        "Places synchronous helper construction inside try as well as await, separates local exceptions from API failures, and does not generalize editState false beyond not-modified."
+      ]
     }
   ]
 }

@@ -58,6 +58,7 @@ for deeper topics see the companion sibling skills:
 - `puregram-testing` — `@puregram/test` (actor-driven test framework for puregram bots)
 - `puregram-markup` — `@puregram/markup` (tagged-template entity-aware formatting; composes message entities, no `parse_mode` header needed — **the default way to format text**)
 - `puregram-rich` — `@puregram/rich` (native-blocks rich-message authoring; parse tags, builders, raw passthrough, sendRich/editRich shortcuts)
+- `puregram-widgets` — `@puregram/widgets` helpers and SDK integration; `telegram-widgets` owns the server-side limits and lifecycle
 - `puregram-media-cacher` — `@puregram/media-cacher` (transparent `file_id` caching plugin, drop-in via `onBeforeRequest`)
 - `puregram-rate-limit` — `@puregram/rate-limit` (inbound per-user fixed-window rate limiting; distinct from outbound `@puregram/throttler`)
 - `puregram-file-id` — `@puregram/file-id` (parse / inspect / serialize telegram `file_id` and `file_unique_id` strings)
@@ -84,6 +85,9 @@ node skills/using-puregram/tools/check-version.mjs           # installed version
 each tool supports `--help` and most support `--list`. for full reference depth, also read `node_modules/puregram/README.md` (~46 KB, ships with the package) — it has exhaustive option tables, factory menus, and live examples for every concept covered below.
 
 For the server contract, use `telegram-bot-api/tools/botapi.mjs`; it can reuse the shared official Markdown catalogue offline and reports source freshness. For a broader bot guide or unknown official page, use `telegram-core-docs/tools/core-docs.mjs search`, then `read --section`. A catalogue result describes Telegram at its recorded verification time, not what the installed puregram version supports. Keep SDK lookup and official-documentation lookup separate; MTProto pages do not turn puregram into a user-account client.
+For embedded HTML message widgets use `telegram-widgets`; for full Mini Apps use
+`telegram-mini-apps`. Use `telegram-payments` for checkout, fulfillment, refunds and
+subscription rules rather than treating invoice builders as the complete payment lifecycle.
 
 example folders aren't shipped on npm — fetch them from [`github.com/puregram/puregram/tree/v3/examples`](https://github.com/puregram/puregram/tree/v3/examples).
 
@@ -308,7 +312,7 @@ document and audio groups must be uniform; photos and videos can mix freely.
 
 inline-query and inline-message factories: `InlineQueryResult.{article,photo,video,audio,voice,document,gif,mpeg4Gif,location,venue,contact,game}` plus `InlineQueryResult.cached.X`, and `InputMessageContent.{text,location,venue,contact,invoice}` plus `InputMessageContent.rich` — the rich variant is **callable**: `InputMessageContent.rich(richObject)` accepts a `Rich` / `RichLike` from `@puregram/rich` and auto-unwraps it to `{ rich_message: … }` using the dialect it was built with; the sub-forms `InputMessageContent.rich.{md,markdown,html}(string, params?)` build from a raw dialect string instead and take an optional `{ isRtl?, skipEntityDetection? }` extras bag.
 
-**factory naming convention** (holds for every factory): required fields are positional, the optional extras bag is camelCase mirroring the bot-api field one-to-one (`parseMode`, `showAboveText`, `canSendMessages`, `allowSendingWithoutReply`, ...). two spots rename beyond plain camelCasing: `InlineQueryResult.*` flattens `input_message_content` → `content` and the `thumbnail_*` group → `thumbnail: { url, width?, height?, mimeType? }`; and `InputPollOption.text(text, { parseMode?, entities?, media? })` drops the bot-api `text_` prefix so its formatting extras read like `InputMessageContent.text`.
+**factory shapes vary:** `InputMedia.photo` and `InputPollOption.text` take positional values, while `InlineQueryResult.*` takes one friendly options object, e.g. `article({ id, title, content })`. inspect installed signatures rather than applying one shape to every factory. extras are generally camelCase (`parseMode`, `showAboveText`, etc.). inline results flatten `input_message_content` → `content` and the `thumbnail_*` group → `thumbnail: { url, width?, height?, mimeType? }`; `InputPollOption.text` drops the bot-api `text_` prefix.
 
 ## other factories
 

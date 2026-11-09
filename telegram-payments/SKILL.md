@@ -97,6 +97,10 @@ separate numeric deadline; answer promptly, without inventing the same guarantee
   and has no partial-amount parameter. Route fiat refunds through the relevant provider.
 - Canceling subscription extension is **not** refunding payments or immediately removing
   paid access. `is_canceled: false` allows the user to re-enable; it does not prove renewal.
+- Handle `Update.subscription` renewal-state notifications (`canceled`, `active`, `failed`)
+  separately from receipts. `BotSubscriptionUpdated` carries user and invoice payload,
+  not a charge ID; `active` alone does not extend paid entitlement. See the subscription
+  reference for correlation when one user has multiple subscriptions.
 
 Idempotent database writes, inventory reservation, outbox delivery, payer eligibility and
 refund authorization are **merchant application design**, not extra Bot API guarantees.
