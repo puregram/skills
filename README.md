@@ -42,19 +42,34 @@ these skills describe the server, not a library. the knowledge applies to any la
 - [**telegram-business-bots**](./telegram-business-bots/SKILL.md) — bots connected to a user's account: the connection lifecycle, business messages and the chat-id namespace trap, acting as the user, rights → calls, misleading error strings, the 24-hour rule
 - [**telegram-rich-messages**](./telegram-rich-messages/SKILL.md) — the rich-message format itself, independent of any SDK: all 24 block types and 26 inline types, wire shapes, limits, media reuse, drafts, and the native-blocks / markdown / html forms side by side
 
+### official Telegram documentation
+
+- [**telegram-core-docs**](./telegram-core-docs/SKILL.md) — searchable, provenance-aware catalogue of official Markdown pages across bot guides, Bot API, MTProto/TL, TDLib, Gateway and other developer documentation. read a page or section and follow related links without loading the full corpus into context.
+
 ### cookbook
 
 - [**recipes**](./using-puregram/reference/recipes.md) — 15 short canonical bot recipes referenced from the main skill
 
 ## lookup tools
 
-`telegram-bot-api` ships [`telegram-bot-api/tools/botapi.mjs`](./telegram-bot-api/tools/botapi.mjs): zero dependencies, node ≥ 18. it fetches the official reference live (cached for 6 h), so it answers for the current api version rather than whatever an SDK or a model remembers:
+`telegram-bot-api` ships [`telegram-bot-api/tools/botapi.mjs`](./telegram-bot-api/tools/botapi.mjs): zero dependencies, node ≥18 standalone. On node ≥22.13 it also reads the optional shared Markdown catalogue, including method/type pages missing from the fixed indexes. Exact lookups stay targeted; search and reverse references reuse cached entry pages. Source URLs, hashes, verification times and explicit freshness distinguish cached evidence from live verification:
 
     node telegram-bot-api/tools/botapi.mjs sendMessage ReplyParameters   # exact entries
     node telegram-bot-api/tools/botapi.mjs search ephemeral               # ranked search
     node telegram-bot-api/tools/botapi.mjs refs InlineQueryResult         # where a type is used
     node telegram-bot-api/tools/botapi.mjs changelog --since 10.0         # what changed
     node telegram-bot-api/tools/botapi.mjs features "Guest Bots"          # the /bots/features guide
+
+`telegram-core-docs` ships [`telegram-core-docs/tools/core-docs.mjs`](./telegram-core-docs/tools/core-docs.mjs): zero dependencies, node ≥22.13 with built-in SQLite full-text search. Seed it from a read-only tracker backup, then search locally or refresh one selected page:
+
+    node telegram-core-docs/tools/core-docs.mjs import-tracker /path/to/tracker-backup.sqlite
+    node telegram-core-docs/tools/core-docs.mjs search business bot rights --area bots --limit 5
+    node telegram-core-docs/tools/core-docs.mjs read /api/passkeys.md --refresh
+    node telegram-core-docs/tools/core-docs.mjs sections /bots/features.md --offline
+    node telegram-core-docs/tools/core-docs.mjs read /bots/features.md --section "Guest Bots" --offline
+    node telegram-core-docs/tools/core-docs.mjs links /api/auth.md --offline
+
+Both tools accept `--json` and `--offline`. `TG_CORE_DOCS_DB` selects the shared catalogue; the default is `${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs/catalogue.sqlite`. The tracker snapshot's successful scan time is verification metadata, not an invented body-fetch timestamp. Imports copy only healthy public documentation rows, never bot credentials, leases or notification queues. Repeat imports to discover newly tracked URLs; search does not crawl the site. No revision-history lookup is claimed because the tracker stores latest bodies only.
 
 `using-puregram` ships executable lookup tools under [`using-puregram/tools/`](./using-puregram/tools/) — they resolve the user's installed `node_modules/@puregram/api` and `node_modules/puregram` at runtime, so they work in any project that has puregram installed:
 

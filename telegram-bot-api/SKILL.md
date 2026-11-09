@@ -2,7 +2,7 @@
 name: telegram-bot-api
 description: >
   use before writing any telegram bot api call, payload or update handler from memory, in any
-  language or SDK. ships `tools/botapi.mjs`, a zero-dependency live lookup over the official
+  language or SDK. ships `tools/botapi.mjs`, a zero-dependency Markdown lookup over the official
   reference at core.telegram.org/bots/api: exact method parameters, type fields, unions, return
   types, reverse references, prose sections, the changelog and the /bots/features guide. also
   covers how to read the reference correctly (optional fields, `True` types, 52-bit ids,
@@ -10,19 +10,49 @@ description: >
   the server.
 ---
 
-# telegram bot api — live lookup
+# telegram bot api — official Markdown lookup
 
-the bot api changes every month or two, and parameters get renamed or replaced, not just added.
-anything you remember about a method added after ~9.0 is probably incomplete, and some of it is
-wrong. **look it up before you write it.**
+look up method parameters and update fields before writing them: the server documentation can
+change independently of your installed SDK.
 
 ```
 node <skill>/tools/botapi.mjs <Name> [<Name>...]   # exact method / type / prose section
 ```
 
-the tool fetches the official html, caches it for 6 hours (`--refresh` to refetch, `--offline` to
-never touch the network) and falls back to a stale cache with a warning if the network is down.
-node ≥ 18, no install step.
+exact lookups fetch only discovery indexes/changelog and requested entry pages, not the whole
+reference. `search` and `refs` reuse cached entry pages, even stale ones, and fetch missing pages
+with at most 8 concurrent requests. offline searches warn when only an index is cached, since
+uncached fields and references cannot be searched.
+
+node ≥18 works standalone, without installing another skill or npm dependencies. node ≥22.13
+also reads an **optional, read-only shared catalogue** at `$TG_CORE_DOCS_DB`, otherwise
+`${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs/catalogue.sqlite`. tracker-imported official
+Markdown pages can answer offline lookups and discover methods/types omitted from the fixed
+indexes; names come from actual page headings, not inferred API definitions.
+
+the legacy Markdown cache remains at `$TG_BOTAPI_CACHE`, otherwise
+`${XDG_CACHE_HOME:-~/.cache}/telegram-bot-api`. the tool chooses the newest valid cached copy
+across both stores. it writes targeted live fetches only to this legacy cache.
+
+- `--offline` never uses the network, even together with `--refresh`; missing exact pages fail.
+- `sendMessage --refresh` bypasses both cached copies for live verification of discovery pages
+  and this method. `search --refresh` / `refs --refresh` refetch all their entry pages.
+- exact lookups normally recheck pages after 6 hours (`--ttl <hours>`). failed network fetches
+  fall back to available cache with a warning; a fallback is not successful verification.
+- text and JSON expose source URL, SHA-256, source, `checkedAt`, `fetchedAt`, and freshness
+  (`fresh`, `stale`, `unknown`; `stale: true` also covers unknown). freshness means checked
+  within the TTL, not a promise that the server has not changed. tracker `fetchedAt: null`
+  stays unknown. old standalone files without verification metadata also have unknown
+  timestamps; their filesystem time is only a cache-selection hint.
+- version/release information comes from the changelog, with its own provenance; a partial
+  offline corpus may have an unknown version. index listings cite their index unless a
+  discovered page supplied the entry.
+
+run the isolated parser/corpus regressions (node ≥22.13 exercises SQLite cases) with:
+
+```
+node --test <skill>/tools/botapi.test.mjs
+```
 
 ## commands
 
@@ -106,6 +136,6 @@ string, `application/x-www-form-urlencoded`, `application/json` (no file uploads
 feature skills built on this lookup: `telegram-ephemeral-messages`, `telegram-guest-mode`,
 `telegram-inline-mode`, `telegram-streaming-replies`, `telegram-groups`, `telegram-business-bots`,
 `telegram-rich-messages`.
-puregram users: `using-puregram` has its own lookup tools over the installed `@puregram/api`
-typings, which tell you what *your installed version* supports. this tool tells you what the
-*server* supports.
+puregram users: `using-puregram` looks up the installed `@puregram/api` typings. these official
+pages describe the server contract at their recorded verification time, **not installed SDK
+support**. confirm SDK names/types separately; do not invent wrappers for newly documented APIs.

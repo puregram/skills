@@ -1,0 +1,27 @@
+{
+  "skill_name": "telegram-core-docs",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "We are offline. Before I implement a guest-mode reply, look up answerGuestQuery: which fields are required, what does it return, and what official cached source supports that? Include the source URL, SHA-256 and recorded verification time if the tools expose them. Do not infer that a puregram wrapper exists merely because Telegram documents the method.",
+      "expected_output": "Retrieve the cached official method, accurately report required guest_query_id and result plus the documented return, expose cache provenance without inventing timestamps, and distinguish official API availability from installed SDK support.",
+      "files": [],
+      "assertions": [
+        "Retrieves official cached evidence and identifies guest_query_id and result as the required fields.",
+        "Reports the documented return and canonical method URL without inventing an SDK wrapper.",
+        "Supplies a real content hash and recorded verification time, without inventing an unknown fetch timestamp."
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "We are offline. Find Telegram's official guide for logging a user account in with passkeys. Explain the registration and login flows using only the retrieved documentation, cite the guide and relevant TL methods, and report the cached page's hash and verification time if available. Make clear whether this is a Bot API/puregram feature or an MTProto client workflow. If you cannot retrieve the guide offline, say so instead of filling gaps from memory.",
+      "expected_output": "Discover and read /api/passkeys.md, ground the flows and method names in that guide, report real provenance, and keep MTProto user-account authentication separate from Bot API/puregram.",
+      "files": [],
+      "assertions": [
+        "Finds and cites the cached official /api/passkeys.md guide.",
+        "Grounds registration and login in retrieved TL methods and distinguishes MTProto user authentication from Bot API/puregram.",
+        "Reports the actual cached hash and verification time without inventing absent timestamps."
+      ]
+    }
+  ]
+}

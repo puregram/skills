@@ -83,6 +83,8 @@ node skills/using-puregram/tools/check-version.mjs           # installed version
 
 each tool supports `--help` and most support `--list`. for full reference depth, also read `node_modules/puregram/README.md` (~46 KB, ships with the package) — it has exhaustive option tables, factory menus, and live examples for every concept covered below.
 
+For the server contract, use `telegram-bot-api/tools/botapi.mjs`; it can reuse the shared official Markdown catalogue offline and reports source freshness. For a broader bot guide or unknown official page, use `telegram-core-docs/tools/core-docs.mjs search`, then `read --section`. A catalogue result describes Telegram at its recorded verification time, not what the installed puregram version supports. Keep SDK lookup and official-documentation lookup separate; MTProto pages do not turn puregram into a user-account client.
+
 example folders aren't shipped on npm — fetch them from [`github.com/puregram/puregram/tree/v3/examples`](https://github.com/puregram/puregram/tree/v3/examples).
 
 ## quick start
