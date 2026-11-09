@@ -1,0 +1,23 @@
+{
+  "skill_name": "telegram-payments",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm implementing a Telegram shop in Python. We sell shipped art prints priced in JPY and BHD, plus a downloadable art pack. Our current checkout handler grants the pack as soon as answerPreCheckoutQuery(ok=True) returns. Please propose the correct library-neutral order flow and representative API payload shapes, including flexible shipping and tips for the prints. Can we reuse our card provider for the download? Explain how to obtain current currency minimums/maximums without hardcoding a table, how forwarded invoices affect buyer identity, and what to do if the success update arrives twice. Do not make any API calls or use credentials.",
+      "expected_output": "Separates physical provider/fiat from digital XTR-only sales; looks up current exponent/min/max metadata, not universal cents; XTR whole Stars with one price and no shipping/tips. Corrects fulfillment to verified message.successful_payment and persists distinct charge identifiers. Explains flexible shipping query/options and bounded pre-checkout validation, cites the exact 10-second method deadline with transport latency, does not invent a shipping deadline. Validates authoritative totals/payer, handles shared offers and deduplicates success by charge rather than payload alone. No real execution.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Design the backend lifecycle for a monthly Stars subscription sold from a Telegram Mini App. A user may buy two separate subscriptions. I'd like to use sendInvoice with a seven-day subscription_period; if they cancel, immediately revoke access and refund the last payment automatically. Show what needs correcting, the supported creation/control methods, stored identifiers, recurring-success handling, expiration and how the Mini App should find out the real payment result. Also distinguish native paid channel invite links. No live bot or payment operations.",
+      "expected_output": "Uses createInvoiceLink for bot subscriptions with XTR, one price, current 2592000-second period and at most 10000 Stars, with exact source citations; rejects invented sendInvoice subscription parameter and weekly period. Models multiple subscriptions per user and individual charges, uses recurring flags/authoritative expiration without double extension. Cancellation controls future extension, keeps paid access through the current period, does not imply refund; false only allows user re-enable. Refund is a separate authorized Stars-charge operation. Mini App openInvoice/invoiceClosed is UX, not fulfillment evidence, and points to telegram-mini-apps. Distinguishes channel subscription link permissions, channel balance, and link edits/revocation from bot subscription cancellation/refunds.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Help reconcile a Telegram bot's purchase ledger after a timeout. We have a Stars sale and an outgoing refund with the same StarTransaction.id, a gift purchase and a paid-broadcast debit. The current importer deduplicates all rows by id and treats every incoming amount as a paid order. We also need to refund a fiat print order: is refundStarPayment(user_id, provider_payment_charge_id, amount) correct? Give a safe reconciliation/refund plan, transaction pagination and exact identifier/unit rules. Include ambiguous refund responses and later chargebacks, but don't run any operations.",
+      "expected_output": "Rejects the proposed refund signature: refundStarPayment takes payer user_id and Telegram charge ID, only successful Stars payments, no partial amount; fiat refunds are provider-side. Preserves same-ID original/refund ledger events using direction/kind, classifies transaction partners and does not fulfill gifts/debits/refunds. Gives chronological offset pagination with 1–100/default100 and cites method; matches incoming invoice transaction IDs to SuccessfulPayment Telegram charge, keeps whole Stars/nanostar ledger components distinct from invoice units. Records unknown timeout results and reconciles instead of assuming failure or blindly refunding again. Acknowledges chargeback/balance reversals and no universal payment-status guarantee. No real operations.",
+      "files": []
+    }
+  ]
+}
