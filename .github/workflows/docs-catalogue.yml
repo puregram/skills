@@ -1,8 +1,6 @@
 name: Telegram documentation catalogue
 
 on:
-  schedule:
-    - cron: '17 * * * *'
   workflow_dispatch:
   push:
     branches: [lord]
@@ -34,7 +32,7 @@ jobs:
   publish:
     if: >-
       github.repository == 'puregram/skills' &&
-      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+      github.event_name == 'workflow_dispatch' &&
       github.ref == 'refs/heads/lord'
     needs: test
     runs-on: ubuntu-latest

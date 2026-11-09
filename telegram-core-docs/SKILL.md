@@ -70,8 +70,8 @@ reconstruct an older page.
 
 ## Automatic catalogue updates
 
-GitHub Actions in `puregram/skills` crawls Telegram directly every hour, respecting robots
-rules and bounded concurrency. No tracker server, SSH access or bot credentials are involved.
+The published catalogue is built directly from official Telegram Markdown, respecting robots
+rules and bounded concurrency. It contains public reference data, not tracker state or credentials.
 Only complete crawls passing integrity, coverage and Bot API parser checks are published.
 The workflow reports changed URLs and skills whose guidance needs review; it never rewrites
 measured behavior or SDK instructions from source prose.
@@ -87,9 +87,9 @@ node <skill>/tools/core-docs.mjs search passkeys --no-sync
 
 `sync` forces a release check. `--no-sync` or `TG_CORE_DOCS_AUTO_UPDATE=0` disables automatic
 downloads without disabling targeted page fetches. `--offline` disables all network access.
-GitHub schedules are best-effort, not a freshness guarantee: inspect the returned check
-times, and use `read --refresh` for current evidence. A broken upstream format blocks
-publication instead of replacing working data with silently incomplete output.
+Timely dispatch is not a freshness guarantee: GitHub runner queues and failed jobs can delay
+publication. Inspect the returned check times, and use `read --refresh` for current evidence.
+A broken upstream format blocks publication instead of replacing working data with incomplete output.
 
 Managed snapshots live under `${XDG_CACHE_HOME:-~/.cache}/telegram-core-docs`; `current.json`
 selects a generation-specific SQLite file. An existing `catalogue.sqlite` is a legacy fallback.

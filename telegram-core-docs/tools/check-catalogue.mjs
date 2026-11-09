@@ -125,7 +125,7 @@ export function renderDrift(report) {
     '# Official Telegram documentation sync', '',
     `Checked ${report.checked} URLs; published candidate has ${report.documents} pages and ${report.sections} sections.`, '',
     `Added: ${report.added.length}; changed: ${report.changed.length}; unavailable/removed: ${report.removed.length}.`,
-    'Source: https://core.telegram.org/. No bot host, credentials, notification database or SSH access is involved.', ''
+    'Source: https://core.telegram.org/. The crawler does not access bot credentials or notification databases.', ''
   ]
   if (report.reviewNeeded.length) {
     lines.push('## Skill guidance needs review', '', 'Documentation is updated automatically; measured behavior and SDK instructions are not rewritten.', '')
